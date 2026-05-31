@@ -1,8 +1,6 @@
 <h1 align="center">
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="https://via.placeholder.com/800x200/1a1a2e/ffffff?text=Elva+LaoBai">
-    <img alt="Elva LaoBai" src="https://via.placeholder.com/800x200/ffffff/1a1a2e?text=Elva+LaoBai" width="600">
-  </picture>
+  🧠<br>
+  Elva LaoBai
 </h1>
 
 <p align="center">
@@ -24,7 +22,7 @@
 <p>
   <strong>Elva LaoBai（老白）</strong> 是一款运行在 Android 设备上的 <strong>完全离线、隐私优先</strong> 的语音 AI 助手，
   专为中国老年用户设计。基于 <a href="https://github.com/google-ai-edge/gallery">Google AI Edge Gallery</a> 开源项目，
-  利用 <strong>MediaPipe LLM Inference API</strong> 在设备本地运行 <strong>Gemma</strong> 和 <strong>Qwen</strong> 系列 AI 模型，
+  利用 <strong>MediaPipe LLM Inference API</strong> 在设备本地运行 <strong>Gemma 4</strong> 和 <strong>Qwen</strong> 系列 AI 模型，
   无需联网即可完成智能对话、自动化操作等任务。
 </p>
 
@@ -191,7 +189,7 @@
     <td>本地 LLM 推理引擎</td>
   </tr>
   <tr>
-    <td>Gemma 3n / Gemma 3 / Qwen2.5</td>
+    <td>Gemma 4 / Gemma 3n / Qwen2.5</td>
     <td>设备端 AI 模型（int4/int8 量化）</td>
   </tr>
   <tr>
@@ -241,7 +239,7 @@ Elva/
     ├── DEVELOPMENT.md             # 开发配置说明
     ├── Function_Calling_Guide.md  # 自定义 Function Calling 指南
     ├── Bug_Reporting_Guide.md     # Bug 报告指南
-    ├── model_allowlist.json       # 可用 AI 模型列表（4个）
+    ├── model_allowlist.json       # 可用 AI 模型列表（9个）
     │
     ├── Android/                   # <strong>Android 应用源码</strong>
     │   └── src/
@@ -328,37 +326,58 @@ gradlew assembleRelease</code></pre>
   <tr>
     <th>模型</th>
     <th>大小</th>
-    <th>峰值内存</th>
+    <th>最低内存</th>
     <th>量化</th>
     <th>支持能力</th>
   </tr>
   <tr>
-    <td><strong>Gemma-3n-E2B-it-int4</strong></td>
-    <td>~2.9 GB</td>
-    <td>~5.5 GB</td>
+    <td><strong>Gemma-4-E2B-it</strong> 🆕</td>
+    <td>~2.4 GB</td>
+    <td>≥ 8 GB</td>
     <td>int4</td>
-    <td>对话、提示实验、图像理解</td>
+    <td>对话 · 图像理解 · 音频理解 · 思维链 · 32K 上下文</td>
   </tr>
   <tr>
-    <td><strong>Gemma-3n-E4B-it-int4</strong></td>
-    <td>~4.1 GB</td>
-    <td>~6.5 GB</td>
+    <td><strong>Gemma-4-E4B-it</strong> 🆕</td>
+    <td>~3.4 GB</td>
+    <td>≥ 12 GB</td>
     <td>int4</td>
-    <td>对话、提示实验、图像理解</td>
+    <td>对话 · 图像理解 · 音频理解 · 思维链 · 32K 上下文</td>
+  </tr>
+  <tr>
+    <td><strong>Gemma-3n-E2B-it</strong></td>
+    <td>~3.4 GB</td>
+    <td>≥ 8 GB</td>
+    <td>int4</td>
+    <td>对话 · 图像理解 · 音频理解 · 4K 上下文</td>
+  </tr>
+  <tr>
+    <td><strong>Gemma-3n-E4B-it</strong></td>
+    <td>~4.6 GB</td>
+    <td>≥ 12 GB</td>
+    <td>int4</td>
+    <td>对话 · 图像理解 · 音频理解 · 4K 上下文</td>
   </tr>
   <tr>
     <td><strong>Gemma3-1B-IT</strong></td>
-    <td>~530 MB</td>
-    <td>~2.0 GB</td>
-    <td>q4</td>
-    <td>对话、提示实验</td>
+    <td>~557 MB</td>
+    <td>≥ 6 GB</td>
+    <td>int4</td>
+    <td>对话 · 提示实验</td>
   </tr>
   <tr>
     <td><strong>Qwen2.5-1.5B-Instruct</strong></td>
     <td>~1.5 GB</td>
-    <td>~2.5 GB</td>
+    <td>≥ 6 GB</td>
     <td>q8</td>
-    <td>对话</td>
+    <td>对话 · 提示实验</td>
+  </tr>
+  <tr>
+    <td><strong>DeepSeek-R1-Distill-Qwen-1.5B</strong> 🆕</td>
+    <td>~1.75 GB</td>
+    <td>≥ 6 GB</td>
+    <td>q8</td>
+    <td>对话 · 提示实验 · 推理链</td>
   </tr>
 </table>
 
