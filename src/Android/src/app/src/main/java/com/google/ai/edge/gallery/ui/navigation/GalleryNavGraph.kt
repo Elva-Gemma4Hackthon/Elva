@@ -200,6 +200,8 @@ fun GalleryNavHost(
         recognizedText = uiState.recognizedText,
         responseText = uiState.responseText,
         isThinking = uiState.isThinking,
+        isExecuting = uiState.isExecuting,
+        executionStatus = uiState.executionStatus,
         onMicClick = { voiceViewModel.toggleListening() },
         onSettingsClick = { navController.navigate(ROUTE_HOMESCREEN) },
         ttsEnabled = uiState.ttsEnabled,

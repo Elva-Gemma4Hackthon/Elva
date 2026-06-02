@@ -68,6 +68,8 @@ fun ElvaVoiceScreen(
     recognizedText: String = "",
     responseText: String = "",
     isThinking: Boolean = false,
+    isExecuting: Boolean = false,
+    executionStatus: String? = null,
     onMicClick: () -> Unit = {},
     onSettingsClick: () -> Unit = {},
     ttsEnabled: Boolean = true,
@@ -147,6 +149,17 @@ fun ElvaVoiceScreen(
                 contentAlignment = Alignment.Center,
             ) {
                 when {
+                    isExecuting && executionStatus != null -> {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Text(
+                                text = executionStatus,
+                                fontSize = 24.sp,
+                                fontWeight = FontWeight.Medium,
+                                color = MaterialTheme.colorScheme.primary,
+                                textAlign = TextAlign.Center,
+                            )
+                        }
+                    }
                     isThinking -> {
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
                             Text(

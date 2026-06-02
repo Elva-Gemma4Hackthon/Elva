@@ -27,9 +27,11 @@ data class ElvaVoiceUiState(
     val recognizedText: String = "",
     val responseText: String = "",
     val isThinking: Boolean = false,
+    val isExecuting: Boolean = false,
     val ttsEnabled: Boolean = true,
     val guardDecision: String? = null,
     val routingRoute: String? = null,
+    val executionStatus: String? = null,
 )
 
 @HiltViewModel
@@ -176,7 +178,7 @@ class ElvaVoiceViewModel @Inject constructor(
             return
         }
 
-        // Step 4: Check routing — if LOCAL_ONLY, use local response
+        // Step 4: Check routing — if LOCAL_ONLY, use local response or execute
         val routing = pipelineResult.routingDecision
         if (routing?.route == com.elva.laobai.models.RoutingDecision.Route.LOCAL_ONLY ||
             routing?.route == com.elva.laobai.models.RoutingDecision.Route.STOP) {
@@ -190,34 +192,46 @@ class ElvaVoiceViewModel @Inject constructor(
                 return
             }
 
-            // Local response
+            // V5: If guard ALLOWED and action is executable, run it
+            val action = pipelineResult.nextAction
+            if (pipelineResult.guardDecision.decision == com.elva.laobai.models.GuardDecision.GuardResult.ALLOW &&
+                action.action != com.elva.laobai.models.NextAction.ActionType.SPEAK_ONLY) {
+                executeAction(action)
+                return
+            }
+
+            // Local response (speak-only)
             localFallbackResponse(userText)
             return
         }
 
-        // Step 5: Cloud route — try Gemma 4
+        // Step 5: Cloud route - try Gemma 4 via CloudPlanner
         if (!bridge.state.value.isModelReady) {
             localFallbackResponse(userText)
             return
         }
 
-        val fullResponse = StringBuilder()
-
-        bridge.infer(
-            input = userText,
-            onPartialResult = { token ->
-                fullResponse.append(token)
-                _uiState.update { it.copy(responseText = fullResponse.toString()) }
-            },
-            onDone = { response ->
-                _uiState.update { it.copy(isThinking = false, responseText = response) }
-                if (_uiState.value.ttsEnabled) {
-                    com.elva.laobai.ElvaTtsManager.speak(response)
+        // Use CloudPlanner for async function calling inference
+        com.elva.laobai.router.CloudPlanner.plan(
+            observation = pipelineResult.observation,
+            userText = userText,
+            callback = object : com.elva.laobai.router.CloudPlanner.PlannerCallback {
+                override fun onAction(action: com.elva.laobai.models.NextAction) {
+                    _uiState.update { it.copy(isThinking = false, responseText = action.voicePrompt) }
+                    if (_uiState.value.ttsEnabled) {
+                        com.elva.laobai.ElvaTtsManager.speak(action.voicePrompt)
+                    }
                 }
-            },
-            onError = { error ->
-                Log.e(TAG, "Gemma 4 inference error: $error")
-                localFallbackResponse(userText)
+                override fun onFallback(text: String) {
+                    _uiState.update { it.copy(isThinking = false, responseText = text) }
+                    if (_uiState.value.ttsEnabled) {
+                        com.elva.laobai.ElvaTtsManager.speak(text)
+                    }
+                }
+                override fun onError(error: String) {
+                    Log.e(TAG, "CloudPlanner error: $error")
+                    localFallbackResponse(userText)
+                }
             },
         )
     }
@@ -249,6 +263,49 @@ class ElvaVoiceViewModel @Inject constructor(
 
             if (_uiState.value.ttsEnabled) {
                 com.elva.laobai.ElvaTtsManager.speak(response)
+            }
+        }
+    }
+
+    /**
+     * V5: Execute an action via ActionExecutor.
+     * Shows progress to the user via voice and UI.
+     */
+    private fun executeAction(action: com.elva.laobai.models.NextAction) {
+        _uiState.update {
+            it.copy(
+                isThinking = false,
+                isExecuting = true,
+                executionStatus = "正在执行: ${action.voicePrompt}",
+                responseText = action.voicePrompt,
+            )
+        }
+
+        // Announce the action
+        if (_uiState.value.ttsEnabled) {
+            com.elva.laobai.ElvaTtsManager.speak(action.voicePrompt)
+        }
+
+        com.elva.laobai.executor.ActionExecutor.execute(
+            action = action,
+            context = context,
+        ) { result ->
+            val statusMsg = if (result.success) {
+                "操作完成!"
+            } else {
+                "操作未成功: ${result.message}"
+            }
+
+            _uiState.update {
+                it.copy(
+                    isExecuting = false,
+                    executionStatus = statusMsg,
+                    responseText = if (result.success) "${action.voicePrompt}\n\n$statusMsg" else statusMsg,
+                )
+            }
+
+            if (_uiState.value.ttsEnabled) {
+                com.elva.laobai.ElvaTtsManager.speak(statusMsg)
             }
         }
     }
