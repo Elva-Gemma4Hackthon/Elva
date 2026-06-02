@@ -17,6 +17,7 @@ import com.elva.laobai.models.NextAction.ActionType
 import com.elva.laobai.models.ScreenObservation
 import com.elva.laobai.observer.ScreenObserver
 import com.elva.laobai.privacy.PrivacyFirewall
+import com.elva.laobai.router.CloudPlanner
 import com.elva.laobai.router.LocalRouter
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -392,14 +393,19 @@ object AlwaysOnSentinel {
      * Returns a placeholder — actual cloud planning happens in ElvaInferenceBridge.
      */
     private fun generateCloudAction(userText: String, observation: ScreenObservation?): NextAction {
-        return NextAction(
-            action = ActionType.SPEAK_ONLY,
-            targetDescription = "cloud_planning",
-            voicePrompt = "让我帮您想想怎么操作...",
-            explanation = "Routing to cloud planner",
-            riskLevel = NextAction.RiskLevel.LOW,
-            source = "cloud_router",
-        )
+        val bridge = com.elva.laobai.inference.ElvaInferenceBridge
+        if (bridge.state.value.isModelReady) {
+            return NextAction(
+                action = ActionType.SPEAK_ONLY,
+                targetDescription = "cloud_planning",
+                voicePrompt = "让我帮您想想怎么操作...",
+                explanation = "Routing to cloud planner (model ready)",
+                riskLevel = NextAction.RiskLevel.LOW,
+                source = "cloud_router",
+            )
+        } else {
+            return CloudPlanner.generateFallbackAction(userText)
+        }
     }
 
     private fun extractKeywords(text: String): List<String> {
@@ -424,5 +430,9 @@ object AlwaysOnSentinel {
         val routingDecision: com.elva.laobai.models.RoutingDecision?,
         val nextAction: NextAction,
         val guardDecision: GuardDecision,
+        /** V5: Whether the action was auto-executed. */
+        val wasExecuted: Boolean = false,
+        /** V5: Execution result if auto-executed. */
+        val executionResult: com.elva.laobai.executor.ActionExecutor.ExecutionResult? = null,
     )
 }
