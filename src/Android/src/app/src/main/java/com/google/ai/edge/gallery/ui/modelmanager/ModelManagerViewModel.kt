@@ -912,6 +912,15 @@ constructor(
           }
         }
 
+        // Prefer local model allowlist over remote fetch.
+        if (modelAllowlist == null) {
+          Log.d(TAG, "Trying to load local model allowlist first.")
+          modelAllowlist = readModelAllowlistFromDisk()
+          if (modelAllowlist != null) {
+            Log.d(TAG, "Using local model allowlist, skipping remote fetch.")
+          }
+        }
+
         if (modelAllowlist == null) {
           // Load from github.
           var version = BuildConfig.VERSION_NAME.replace(".", "_")
