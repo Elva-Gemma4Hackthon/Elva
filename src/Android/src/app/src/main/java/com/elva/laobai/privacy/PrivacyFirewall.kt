@@ -46,6 +46,21 @@ object PrivacyFirewall {
         "密码", "支付密码", "登录密码",
         "验证码", "校验码",
         "姓名", "真实姓名",
+        "住址", "家庭住址", "地址", "收货地址", "详细地址",
+        "工作单位", "公司名称",
+    )
+
+    /** Common Chinese surname prefixes for name detection. */
+    private val CHINESE_SURNAMES = setOf(
+        "王", "李", "张", "刘", "陈", "杨", "黄", "赵", "周", "吴",
+        "徐", "孙", "马", "朱", "胡", "郭", "何", "林", "罗", "高",
+        "梁", "郑", "谢", "宋", "唐", "韩", "曹", "许", "邓", "冯",
+    )
+
+    /** Chinese province/city prefixes for address detection. */
+    private val ADDRESS_PREFIXES = listOf(
+        "省", "市", "区", "县", "镇", "乡", "村",
+        "路", "街", "巷", "弄", "号", "楼", "单元", "室",
     )
 
     data class RedactionResult(
@@ -138,6 +153,31 @@ object PrivacyFirewall {
         }
     }
 
+    /**
+     * V3: Check if element text looks like a Chinese name.
+     * Matches 2-4 character strings starting with a common surname.
+     */
+    fun isLikelyNameContent(text: String?, desc: String?): Boolean {
+        if (text.isNullOrBlank()) return false
+        val cleanText = text.trim()
+        if (cleanText.length < 2 || cleanText.length > 4) return false
+        // Check if starts with a common surname
+        return CHINESE_SURNAMES.any { surname ->
+            cleanText.startsWith(surname)
+        } && cleanText.all { it.code in 0x4E00..0x9FFF } // All CJK
+    }
+
+    /**
+     * V3: Check if text looks like a Chinese address.
+     */
+    fun isLikelyAddress(text: String?): Boolean {
+        if (text.isNullOrBlank()) return false
+        // Simple heuristic: contains province/city/district + road/number pattern
+        val hasProvince = text.contains("省") || text.contains("市") || text.contains("区")
+        val hasDetail = text.contains("路") || text.contains("街") || text.contains("号")
+        return hasProvince && hasDetail && text.length > 6
+    }
+
     fun redactUIElements(elements: List<UIElement>): List<UIElement> {
         return elements.map { element ->
             val textRedaction = redactText(element.text)
@@ -146,14 +186,21 @@ object PrivacyFirewall {
             val isSensitiveField = isSensitiveFieldName(element.text) ||
                 isSensitiveFieldName(element.contentDescription ?: "")
 
+            // V3: Check for name-like content near name fields
+            val isNameContent = isLikelyNameContent(element.text, element.contentDescription)
+
+            // V3: Check for address-like content
+            val isAddressContent = isLikelyAddress(element.text)
+
             element.copy(
-                text = if (isSensitiveField && !textRedaction.wasRedacted) {
-                    "[SENSITIVE_FIELD_REDACTED]"
-                } else {
-                    textRedaction.redactedText
+                text = when {
+                    isSensitiveField && !textRedaction.wasRedacted -> "[SENSITIVE_FIELD_REDACTED]"
+                    isNameContent -> "[NAME_REDACTED]"
+                    isAddressContent -> "[ADDRESS_REDACTED]"
+                    else -> textRedaction.redactedText
                 },
                 contentDescription = descRedaction?.redactedText ?: element.contentDescription,
-                isRedacted = textRedaction.wasRedacted || isSensitiveField,
+                isRedacted = textRedaction.wasRedacted || isSensitiveField || isNameContent || isAddressContent,
             )
         }
     }

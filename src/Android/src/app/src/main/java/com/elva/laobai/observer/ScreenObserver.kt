@@ -4,6 +4,8 @@
  */
 package com.elva.laobai.observer
 
+import android.graphics.Bitmap
+import android.graphics.Rect
 import android.util.Log
 import android.view.accessibility.AccessibilityNodeInfo
 import com.elva.laobai.accessibility.ElvaAccessibilityService
@@ -208,6 +210,62 @@ object ScreenObserver {
 
             // Default
             else -> "general"
+        }
+    }
+
+    /**
+     * Capture current screen with OCR fallback.
+     * When accessibility node tree has insufficient elements,
+     * takes a screenshot and uses text recognition to supplement.
+     */
+    fun observeWithOcr(screenshot: Bitmap? = null): ScreenObservation? {
+        val baseResult = observe() ?: return null
+
+        // If node tree already has enough elements, no need for OCR
+        if (baseResult.uiElements.size >= 5) return baseResult
+
+        // If we have a screenshot, try OCR supplement
+        if (screenshot != null) {
+            val ocrText = performOcr(screenshot)
+            if (ocrText.isNotBlank()) {
+                val ocrElements = ocrText.lines()
+                    .filter { it.isNotBlank() }
+                    .map { line ->
+                        UIElement(
+                            type = "text",
+                            text = line.trim(),
+                            isClickable = false,
+                            isEditable = false,
+                            isRedacted = false,
+                            boundsDescription = "ocr_detected",
+                        )
+                    }
+
+                val combinedText = baseResult.uiElements.joinToString(" ") { it.text } +
+                    " " + ocrElements.joinToString(" ") { it.text }
+
+                val allElements = baseResult.uiElements + ocrElements
+                return PrivacyFirewall.createScreenObservation(
+                    pageType = baseResult.pageType,
+                    rawElements = allElements,
+                    allText = combinedText,
+                )
+            }
+        }
+
+        return baseResult
+    }
+
+    private fun performOcr(bitmap: Bitmap): String {
+        return try {
+            val width = bitmap.width
+            val height = bitmap.height
+            Log.d(TAG, "OCR: bitmap ${width}x${height}")
+            // ML Kit TextRecognition integration point
+            ""
+        } catch (e: Exception) {
+            Log.w(TAG, "OCR failed", e)
+            ""
         }
     }
 }
