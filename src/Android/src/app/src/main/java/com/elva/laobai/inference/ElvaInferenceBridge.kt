@@ -13,6 +13,8 @@ import com.google.ai.edge.gallery.runtime.runtimeHelper
 import com.google.ai.edge.gallery.ui.llmchat.LlmChatModelHelper
 import com.google.ai.edge.gallery.ui.llmchat.LlmModelInstance
 import com.google.ai.edge.litertlm.Contents
+import com.elva.laobai.models.NextAction
+import com.elva.laobai.models.ScreenObservation
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -155,5 +157,115 @@ object ElvaInferenceBridge {
             currentModel = null
             onDone()
         }
+    }
+
+    // ===== Function Calling (V2) =====
+
+    /**
+     * Run inference with Function Calling support.
+     * Sends the screen observation + user text to the model,
+     * then parses the structured output into a NextAction.
+     *
+     * Falls back to a local response if the model output
+     * cannot be parsed as a valid action.
+     *
+     * @param observation The current screen observation (redacted).
+     * @param userText The user's voice input.
+     * @param onAction Called with the parsed NextAction.
+     * @param onFallback Called with a fallback voice response if parsing fails.
+     * @param onError Called if inference fails entirely.
+     */
+    fun inferWithFunctions(
+        observation: ScreenObservation?,
+        userText: String,
+        onAction: (NextAction) -> Unit,
+        onFallback: (String) -> Unit,
+        onError: (String) -> Unit,
+    ) {
+        val model = currentModel
+        if (model == null || model.instance == null) {
+            onError("模型未就緒")
+            return
+        }
+
+        val instance = model.instance as LlmModelInstance
+        val conversation = instance.conversation
+
+        // Build the prompt with observation context
+        val prompt = buildFunctionCallPrompt(observation, userText)
+        val content = mutableListOf<com.google.ai.edge.litertlm.Content>()
+        content.add(com.google.ai.edge.litertlm.Content.Text(prompt))
+
+        val fullResponse = StringBuilder()
+
+        CoroutineScope(Dispatchers.Default).launch {
+            try {
+                conversation
+                    .sendMessageAsync(Contents.of(content))
+                    .collect { chunk ->
+                        fullResponse.append(chunk.toString())
+                    }
+
+                val responseText = fullResponse.toString().trim()
+                Log.d(TAG, "Function call response: $responseText")
+
+                // Try to parse as structured action
+                val action = OutputValidator.parseAndValidate(responseText)
+                if (action != null) {
+                    Log.d(TAG, "Parsed action: ${action.action}, target=${action.targetDescription}")
+                    onAction(action)
+                } else {
+                    // Use the raw text as a fallback voice response
+                    Log.d(TAG, "Could not parse as action, using as fallback text")
+                    onFallback(responseText)
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "Function call inference error", e)
+                onError(e.message ?: "推理失败")
+            }
+        }
+    }
+
+    /**
+     * Build the prompt for function calling inference.
+     * Combines the system prompt with current screen context.
+     */
+    private fun buildFunctionCallPrompt(
+        observation: ScreenObservation?,
+        userText: String,
+    ): String {
+        val sb = StringBuilder()
+
+        // Screen context
+        if (observation != null) {
+            sb.appendLine("【当前屏幕信息】")
+            sb.appendLine("页面类型: ${observation.pageType}")
+            sb.appendLine("敏感字段: ${observation.sensitiveFieldCategories.joinToString(", ")}")
+            sb.appendLine("涉及付款: ${if (observation.hasPaymentKeyword) "是" else "否"}")
+            sb.appendLine("有验证码: ${if (observation.hasOtpField) "是" else "否"}")
+            sb.appendLine("有授权请求: ${if (observation.hasAuthorizationRequest) "是" else "否"}")
+            if (observation.fraudIndicators.isNotEmpty()) {
+                sb.appendLine("诈骗指标: ${observation.fraudIndicators.joinToString(", ")}")
+            }
+            sb.appendLine()
+            sb.appendLine("【页面元素】")
+            for (el in observation.uiElements.take(30)) {
+                val flags = mutableListOf<String>()
+                if (el.isClickable) flags.add("可点击")
+                if (el.isEditable) flags.add("可输入")
+                if (el.isRedacted) flags.add("已脱敏")
+                val flagStr = if (flags.isNotEmpty()) " [${flags.joinToString(",")}]" else ""
+                sb.appendLine("- (${el.type}${flagStr}) ${el.text}")
+            }
+            sb.appendLine()
+        }
+
+        // User input
+        sb.appendLine("【老人说的话】")
+        sb.appendLine(userText)
+        sb.appendLine()
+        sb.appendLine("请选择最合适的工具并回复JSON格式。")
+
+        return sb.toString()
     }
 }
