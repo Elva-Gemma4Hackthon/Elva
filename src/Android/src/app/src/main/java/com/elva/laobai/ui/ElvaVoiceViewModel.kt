@@ -32,6 +32,14 @@ data class ElvaVoiceUiState(
     val guardDecision: String? = null,
     val routingRoute: String? = null,
     val executionStatus: String? = null,
+    // Form filling state (Case 1)
+    val isFormFilling: Boolean = false,
+    val formTemplateName: String? = null,
+    val formProgress: String? = null,
+    // Health consultation state (Case 2)
+    val isHealthConsultation: Boolean = false,
+    val healthTriageStage: String? = null,
+    val healthTriageQuestion: String? = null,
 )
 
 @HiltViewModel
@@ -129,8 +137,12 @@ class ElvaVoiceViewModel @Inject constructor(
         val text = matches?.firstOrNull() ?: ""
         _uiState.update { it.copy(isListening = false, recognizedText = text, isThinking = true) }
 
-        // Send recognized text to Gemma 4 via ElvaInferenceBridge
-        processWithGemma4(text)
+        // If in health consultation mode, route to health handler (Case 2)
+        if (_uiState.value.isHealthConsultation) {
+            handleHealthResponse(text)
+        } else {
+            processWithGemma4(text)
+        }
     }
 
     override fun onPartialResults(partialResults: Bundle?) {
@@ -202,6 +214,18 @@ class ElvaVoiceViewModel @Inject constructor(
 
             // Local response (speak-only)
             localFallbackResponse(userText)
+            return
+        }
+
+        // Step 4.5: Health consultation handling (Case 2)
+        if (routing?.reason?.startsWith("health_query") == true) {
+            handleHealthConsultation(userText)
+            return
+        }
+
+        // Step 4.6: Form filling handling (Case 1)
+        if (userText.contains("填表") || userText.contains("填写表单") || userText.contains("帮我填")) {
+            handleFormFilling(pipelineResult.observation)
             return
         }
 
@@ -307,6 +331,133 @@ class ElvaVoiceViewModel @Inject constructor(
             if (_uiState.value.ttsEnabled) {
                 com.elva.laobai.ElvaTtsManager.speak(statusMsg)
             }
+        }
+    }
+
+    /**
+     * Handle health consultation — start the 6-stage triage state machine.
+     * Case 2: Trigger-based health consultation + cloud registration.
+     */
+    private fun handleHealthConsultation(userText: String) {
+        val question = com.elva.laobai.health.HealthTriageEngine.startConsultation(userText)
+        val stageState = com.elva.laobai.health.HealthTriageEngine.getState()
+        _uiState.update {
+            it.copy(
+                isThinking = false,
+                isHealthConsultation = true,
+                healthTriageStage = stageState.stage.name,
+                healthTriageQuestion = question.voicePrompt,
+                responseText = question.voicePrompt,
+            )
+        }
+        if (_uiState.value.ttsEnabled) {
+            com.elva.laobai.ElvaTtsManager.speak(question.voicePrompt)
+        }
+    }
+
+    /**
+     * Handle user response during health consultation.
+     * Advances the HealthTriageEngine state machine.
+     * Call this from onResults() when isHealthConsultation is true.
+     */
+    fun handleHealthResponse(userText: String) {
+        if (!_uiState.value.isHealthConsultation) {
+            processWithGemma4(userText)
+            return
+        }
+
+        _uiState.update { it.copy(isThinking = true) }
+
+        viewModelScope.launch {
+            val nextAction = com.elva.laobai.health.HealthTriageEngine.processUserResponse(userText)
+            val stageState = com.elva.laobai.health.HealthTriageEngine.getState()
+            val isComplete = stageState.stage == com.elva.laobai.health.HealthTriageEngine.Stage.COMPLETE
+
+            // If stage is CLOUD_PLANNING, trigger cloud planner
+            if (stageState.stage == com.elva.laobai.health.HealthTriageEngine.Stage.CLOUD_PLANNING) {
+                val cloudRequest = com.elva.laobai.health.HealthTriageEngine.buildCloudRequest()
+                com.elva.laobai.health.HealthCloudPlanner.plan(
+                    request = cloudRequest,
+                    onResult = { response ->
+                        _uiState.update {
+                            it.copy(
+                                isThinking = false,
+                                healthTriageStage = "COMPLETE",
+                                isHealthConsultation = false,
+                                responseText = response.summaryText,
+                            )
+                        }
+                        if (_uiState.value.ttsEnabled) {
+                            com.elva.laobai.ElvaTtsManager.speak(response.summaryText)
+                        }
+                    },
+                    onError = { error ->
+                        Log.e(TAG, "Cloud planner error: $error")
+                        _uiState.update {
+                            it.copy(isThinking = false, responseText = "抱歉，云端规划失败了，建议您直接联系医院挂号。")
+                        }
+                    },
+                    onFallback = { fallback ->
+                        _uiState.update {
+                            it.copy(
+                                isThinking = false,
+                                healthTriageStage = "COMPLETE",
+                                isHealthConsultation = false,
+                                responseText = fallback.summaryText,
+                            )
+                        }
+                        if (_uiState.value.ttsEnabled) {
+                            com.elva.laobai.ElvaTtsManager.speak(fallback.summaryText)
+                        }
+                    },
+                )
+                return@launch
+            }
+
+            _uiState.update {
+                it.copy(
+                    isThinking = false,
+                    healthTriageStage = stageState.stage.name,
+                    healthTriageQuestion = nextAction.voicePrompt,
+                    responseText = nextAction.voicePrompt,
+                    isHealthConsultation = !isComplete,
+                )
+            }
+
+            if (_uiState.value.ttsEnabled) {
+                com.elva.laobai.ElvaTtsManager.speak(nextAction.voicePrompt)
+            }
+        }
+    }
+
+    /**
+     * Handle form filling — trigger the form fill engine.
+     * Case 1: Always-on fixed form filling assistant.
+     */
+    private fun handleFormFilling(observation: com.elva.laobai.models.ScreenObservation?) {
+        val fillState = com.elva.laobai.sentinel.AlwaysOnSentinel.startFormFilling()
+        if (fillState == null) {
+            _uiState.update {
+                it.copy(isThinking = false, responseText = "抱歉，我还不认识这个表单，不能帮您自动填写。")
+            }
+            if (_uiState.value.ttsEnabled) {
+                com.elva.laobai.ElvaTtsManager.speak("抱歉，我还不认识这个表单，不能帮您自动填写。")
+            }
+            return
+        }
+
+        val firstAction = com.elva.laobai.forms.FormFillEngine.getNextAction()
+        _uiState.update {
+            it.copy(
+                isThinking = false,
+                isFormFilling = true,
+                formTemplateName = fillState.templateName,
+                formProgress = "${fillState.filledFields}/${fillState.totalFields} 已填写",
+                responseText = firstAction?.voicePrompt ?: "好的，老白来帮您填写${fillState.templateName}~",
+            )
+        }
+        if (_uiState.value.ttsEnabled && firstAction != null) {
+            com.elva.laobai.ElvaTtsManager.speak(firstAction.voicePrompt)
         }
     }
 

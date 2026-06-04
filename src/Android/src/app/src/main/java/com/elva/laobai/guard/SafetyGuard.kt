@@ -71,6 +71,17 @@ object SafetyGuard {
     )
 
     /**
+     * Blocked targets in form pages — these must never be auto-clicked.
+     * From Case 1: Always-on form filling assistant.
+     */
+    private val FORM_BLOCKED_TARGETS = setOf(
+        "提交", "确认提交", "确认报名", "立即报名",
+        "支付", "付款", "确认支付", "立即支付",
+        "授权", "解除绑定", "获取验证码", "发送验证码",
+        "删除", "删除患者信息", "注销", "取消预约",
+    )
+
+    /**
      * Evaluate a NextAction against the current screen context.
      *
      * @param action The proposed action from the planner.
@@ -131,6 +142,56 @@ object SafetyGuard {
                     suggestion = "千万不要继续操作！建议拨打96110反诈热线或联系家人。"
                 ),
             )
+        }
+
+        // Rule 3.5: Form context — block interactions with blocked targets (Case 1)
+        if (observation?.pageType == "form") {
+            val targetDesc = action.targetDescription
+            val isBlockedTarget = FORM_BLOCKED_TARGETS.any { blocked ->
+                targetDesc.contains(blocked, ignoreCase = true)
+            }
+
+            if (isBlockedTarget && action.action in listOf(ActionType.CLICK_ELEMENT)) {
+                Log.w(TAG, "REQUIRE_CONFIRMATION: Form blocked target '$targetDesc'")
+                return GuardDecision(
+                    decision = GuardResult.REQUIRE_CONFIRMATION,
+                    requireHumanCheck = true,
+                    riskLevel = RiskLevel.HIGH,
+                    reason = "form_blocked_target_$targetDesc",
+                    securityPolicy = "form_blocked_targets_policy",
+                    autoProtect = true,
+                    safeAlternative = buildThreeLayerOutput(
+                        fact = "当前页面有'$targetDesc'按钮。",
+                        inference = "这是表单提交或付款操作，需要您自己确认。",
+                        suggestion = "请仔细检查填写的信息后，自己点击'$targetDesc'按钮。"
+                    ),
+                )
+            }
+
+            // Also check if typing into sensitive fields
+            if (action.action == ActionType.TYPE_TEXT && action.value != null) {
+                val lowerValue = action.value.lowercase()
+                val sensitiveValuePatterns = listOf("验证码", "密码", "身份证")
+                val isSensitiveValue = sensitiveValuePatterns.any {
+                    lowerValue.contains(it) || targetDesc.contains(it)
+                }
+                if (isSensitiveValue) {
+                    Log.w(TAG, "DENY: Typing sensitive value in form context")
+                    return GuardDecision(
+                        decision = GuardResult.DENY,
+                        requireHumanCheck = true,
+                        riskLevel = RiskLevel.HIGH,
+                        reason = "form_sensitive_value_${targetDesc}",
+                        securityPolicy = "form_sensitive_value_policy",
+                        autoProtect = true,
+                        safeAlternative = buildThreeLayerOutput(
+                            fact = "表单中有'$targetDesc'字段。",
+                            inference = "这是敏感信息字段，老白不会帮您自动填写。",
+                            suggestion = "请自己手动输入'$targetDesc'，千万不要告诉任何人。"
+                        ),
+                    )
+                }
+            }
         }
 
         // Rule 4: Check action-specific risk

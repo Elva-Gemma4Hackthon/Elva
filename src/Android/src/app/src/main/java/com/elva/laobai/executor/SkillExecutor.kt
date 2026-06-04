@@ -11,6 +11,11 @@ import com.elva.laobai.models.NextAction
 import com.elva.laobai.models.NextAction.ActionType
 import com.elva.laobai.models.NextAction.RiskLevel
 import com.elva.laobai.guard.SafetyGuard
+import com.elva.laobai.forms.FormTemplateMatcher
+import com.elva.laobai.forms.FormFillEngine
+import com.elva.laobai.health.HealthTriageEngine
+import com.elva.laobai.health.HealthCloudPlanner
+import com.elva.laobai.memory.LocalUserMemory
 
 /**
  * Skill Executor - dynamic skill system that bridges Function Calling
@@ -568,6 +573,64 @@ object SkillExecutor {
                     voicePrompt = "姝ｅ湪杩斿洖涓婁竴椤?..",
                     explanation = "鎸変笅杩斿洖閿?,
                     riskLevel = RiskLevel.ZERO, source = "skill",
+                ))
+            },
+        ))
+
+        // Skill 7: Fill Form (Case 1 — Always-on form filling assistant)
+        registerSkill(SkillDef(
+            id = "fill_form",
+            displayName = "填写表单",
+            description = "自动识别并填写固定模板表单，辅助老人完成报名、登记等操作",
+            requiredParams = emptyList(),
+            riskLevel = RiskLevel.LOW,
+            triggerKeywords = listOf("填表", "填写", "报名", "注册", "表单", "登记"),
+            buildActions = { _ ->
+                val fillState = com.elva.laobai.sentinel.AlwaysOnSentinel.startFormFilling()
+                if (fillState == null) {
+                    listOf(NextAction(
+                        action = ActionType.SPEAK_ONLY,
+                        targetDescription = "form_no_match",
+                        voicePrompt = "抱歉，我还不认识这个表单。您可以手动填写，或者告诉家人帮忙设置模板。",
+                        explanation = "未匹配到已知表单模板",
+                        riskLevel = RiskLevel.ZERO,
+                        source = "skill",
+                    ))
+                } else {
+                    val templateName = fillState.templateName ?: "表单"
+                    val progress = "${fillState.filledFields}/${fillState.totalFields}"
+                    listOf(NextAction(
+                        action = ActionType.SPEAK_ONLY,
+                        targetDescription = "form_fill_start",
+                        voicePrompt = "好的，老白来帮您填写${templateName}。已填写${progress}项，您看着就行~",
+                        explanation = "开始填写表单: $templateName",
+                        riskLevel = RiskLevel.LOW,
+                        source = "skill",
+                    ))
+                }
+            },
+        ))
+
+        // Skill 8: Health Consultation (Case 2 — Trigger health consultation + cloud planning)
+        registerSkill(SkillDef(
+            id = "health_consultation",
+            displayName = "看病咨询",
+            description = "通过6阶段问询了解病情，脱敏后上云推荐科室，并协助挂号",
+            requiredParams = emptyList(),
+            optionalParams = mapOf("symptom" to ""),
+            riskLevel = RiskLevel.LOW,
+            triggerKeywords = listOf(
+                "不舒服", "疼", "痛", "难受", "头晕", "恶心",
+                "发烧", "咳嗽", "胸闷", "看病", "挂号",
+            ),
+            buildActions = { _ ->
+                listOf(NextAction(
+                    action = ActionType.SPEAK_ONLY,
+                    targetDescription = "health_start",
+                    voicePrompt = "好的，老白来帮您看看。请告诉我您哪里不舒服？",
+                    explanation = "启动6阶段健康问询状态机",
+                    riskLevel = RiskLevel.ZERO,
+                    source = "skill",
                 ))
             },
         ))

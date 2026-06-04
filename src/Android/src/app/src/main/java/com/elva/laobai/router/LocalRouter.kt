@@ -45,6 +45,16 @@ object LocalRouter {
     )
 
     /**
+     * Health-related keywords for Case 2 health consultation routing.
+     */
+    private val HEALTH_KEYWORDS = listOf(
+        "不舒服", "疼", "痛", "难受", "头晕", "恶心",
+        "发烧", "咳嗽", "胸闷", "胃", "肚子", "腰",
+        "腿", "头", "嗓子", "看病", "医院", "挂号",
+        "症状", "过敏", "痒", "出血", "肿", "晕",
+    )
+
+    /**
      * Make a routing decision based on the screen observation.
      *
      * @param observation The redacted screen observation.
@@ -126,7 +136,33 @@ object LocalRouter {
             )
         }
 
-        // Step 6: Check if we need to ask user for missing info
+        // Step 6: Health consultation routing (Case 2)
+        if (userIntent != null && isHealthRelated(userIntent)) {
+            val hasSensitivePii = observation.sensitiveFieldCategories.contains("pii_detected")
+            return if (hasSensitivePii || !observation.cloudSafe) {
+                Log.d(TAG, "LOCAL_ONLY: Health query with PII — local only")
+                RoutingDecision(
+                    route = Route.LOCAL_ONLY,
+                    complexity = Complexity.HIGH,
+                    reason = "health_query_with_pii_local_only",
+                    containsUnredactedPii = true,
+                    cloudSafe = false,
+                    localFallback = true,
+                )
+            } else {
+                Log.d(TAG, "CLOUD_PLANNER: Health query, cloudSafe — route to cloud")
+                RoutingDecision(
+                    route = Route.CLOUD_PLANNER,
+                    complexity = Complexity.HIGH,
+                    reason = "health_query_routed_to_cloud",
+                    containsUnredactedPii = false,
+                    cloudSafe = true,
+                    localFallback = true,
+                )
+            }
+        }
+
+        // Step 7: Check if we need to ask user for missing info
         if (userIntent.isNullOrBlank() && observation.uiElements.isEmpty()) {
             Log.d(TAG, "ASK_USER: No intent and no UI elements")
             return RoutingDecision(
@@ -139,7 +175,7 @@ object LocalRouter {
             )
         }
 
-        // Step 7: Complex task — route to cloud planner
+        // Step 8: Complex task — route to cloud planner
         // This is the default for multi-step tasks like forms, payments (without OTP), etc.
         val complexity = when {
             observation.hasPaymentKeyword -> Complexity.HIGH
@@ -158,5 +194,12 @@ object LocalRouter {
             cloudSafe = observation.cloudSafe,
             localFallback = true,
         )
+    }
+
+    /**
+     * Check if user intent is health-related for Case 2 routing.
+     */
+    private fun isHealthRelated(intent: String): Boolean {
+        return HEALTH_KEYWORDS.any { intent.contains(it) }
     }
 }

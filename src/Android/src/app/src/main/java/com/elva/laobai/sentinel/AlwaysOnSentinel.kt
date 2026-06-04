@@ -19,6 +19,8 @@ import com.elva.laobai.observer.ScreenObserver
 import com.elva.laobai.privacy.PrivacyFirewall
 import com.elva.laobai.router.CloudPlanner
 import com.elva.laobai.router.LocalRouter
+import com.elva.laobai.forms.FormTemplateMatcher
+import com.elva.laobai.forms.FormFillEngine
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -216,6 +218,14 @@ object AlwaysOnSentinel {
             return
         }
 
+        // Check for form pages — passive form detection (Case 1)
+        if (observation.pageType == "form") {
+            val match = FormTemplateMatcher.match(observation)
+            if (match.confidence >= 0.5f) {
+                Log.d(TAG, "Form template matched: ${match.template?.displayName} (confidence=${match.confidence})")
+            }
+        }
+
         // Update state with current observation (no alert)
         _state.value = _state.value.copy(
             lastObservation = observation,
@@ -259,6 +269,40 @@ object AlwaysOnSentinel {
             observation ?: ScreenObservation(pageType = "unknown", uiElements = emptyList(), sensitiveFieldCategories = emptyList()),
             userText,
         )
+
+        // Step 3.5: Health consultation handling (Case 2)
+        if (routing.reason.startsWith("health_query")) {
+            val healthFirstAction = com.elva.laobai.health.HealthTriageEngine.startConsultation(userText)
+            val healthGuardDecision = SafetyGuard.evaluate(healthFirstAction, observation)
+            val finalAction = when (healthGuardDecision.decision) {
+                GuardResult.ALLOW -> healthFirstAction
+                GuardResult.REQUIRE_CONFIRMATION -> healthFirstAction.copy(
+                    action = ActionType.ASK_CONFIRMATION,
+                    voicePrompt = "大爷，${healthFirstAction.voicePrompt}\n\n您确认要咨询看病问题吗？",
+                )
+                GuardResult.DENY -> NextAction(
+                    action = ActionType.EMERGENCY_STOP,
+                    targetDescription = "health_deny",
+                    voicePrompt = healthGuardDecision.safeAlternative ?: "老白建议您直接去医院就诊，不要耽误。",
+                    explanation = healthGuardDecision.reason,
+                    riskLevel = RiskLevel.HIGH,
+                )
+            }
+
+            val event = EdgeEvent(
+                eventType = "health_consultation",
+                source = "voice_input",
+                triggerKeywords = extractKeywords(userText),
+            )
+
+            return PipelineResult(
+                event = event,
+                observation = observation,
+                routingDecision = routing,
+                nextAction = finalAction,
+                guardDecision = healthGuardDecision,
+            )
+        }
 
         // Step 4: Generate action based on route
         val action = when (routing.route) {
@@ -406,6 +450,30 @@ object AlwaysOnSentinel {
         } else {
             return CloudPlanner.generateFallbackAction(userText)
         }
+    }
+
+    /**
+     * Start the form filling assistant (Case 1).
+     * Called when user triggers form assistance on a matched form page.
+     *
+     * @return The FillState after beginning fill, or null if no template matched.
+     */
+    fun startFormFilling(): FormFillEngine.FillState? {
+        val observation = ScreenObserver.observe() ?: return null
+        val match = FormTemplateMatcher.match(observation)
+        if (match.confidence < 0.5f || match.template == null) return null
+
+        // Begin filling and return the fill state
+        FormFillEngine.beginFill(match.template, observation)
+        return FormFillEngine.getFillState()
+    }
+
+    /**
+     * Start the health consultation assistant (Case 2).
+     * Returns the first consultation question.
+     */
+    fun startHealthConsultation(userText: String): NextAction {
+        return com.elva.laobai.health.HealthTriageEngine.startConsultation(userText)
     }
 
     private fun extractKeywords(text: String): List<String> {
