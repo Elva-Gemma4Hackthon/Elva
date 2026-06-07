@@ -14,6 +14,7 @@ import com.elva.laobai.models.GuardDecision
 import com.elva.laobai.models.GuardDecision.GuardResult
 import com.elva.laobai.models.NextAction
 import com.elva.laobai.models.NextAction.ActionType
+import com.elva.laobai.models.NextAction.RiskLevel
 import com.elva.laobai.models.ScreenObservation
 import com.elva.laobai.observer.ScreenObserver
 import com.elva.laobai.privacy.PrivacyFirewall
@@ -223,6 +224,14 @@ object AlwaysOnSentinel {
             val match = FormTemplateMatcher.match(observation)
             if (match.confidence >= 0.5f) {
                 Log.d(TAG, "Form template matched: ${match.template?.displayName} (confidence=${match.confidence})")
+                val templateName = match.template?.displayName ?: "表单"
+                val prompt = "老白发现您正在填写${templateName}，需要我帮您填写吗？"
+                com.elva.laobai.ElvaTtsManager.speak(prompt)
+                // Update state to indicate form was detected
+                _state.value = _state.value.copy(
+                    lastObservation = observation,
+                )
+                return
             }
         }
 
@@ -271,6 +280,7 @@ object AlwaysOnSentinel {
         )
 
         // Step 3.5: Health consultation handling (Case 2)
+        // All triage is local — HealthTriageEngine + on-device Gemma 4.
         if (routing.reason.startsWith("health_query")) {
             val healthFirstAction = com.elva.laobai.health.HealthTriageEngine.startConsultation(userText)
             val healthGuardDecision = SafetyGuard.evaluate(healthFirstAction, observation)

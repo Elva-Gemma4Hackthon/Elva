@@ -61,12 +61,10 @@ object BookHospitalTask {
                 steps.add(delayStep(1500L))
             }
 
-            // Step: Confirm booking
-            steps.add(clickByTextFuzzyStep("预约", "确认挂号"))
-            steps.add(delayStep(2000L, "正在确认挂号..."))
-
-            // Final confirmation
-            steps.add(confirmationStep("请在手机上确认挂号信息"))
+            // Step: Confirm booking — stop before final click, let user confirm
+            // (Do NOT auto-click "预约/确认挂号" — user must verify the details)
+            steps.add(confirmationStep("请仔细核对挂号信息，确认无误后在手机上点击确认挂号"))
+            steps.add(delayStep(2000L, "等待用户确认..."))
         } else {
             // Strategy B: No hospital specified — guide the user
             steps.add(launchAppStep(WECHAT, "正在打开微信..."))

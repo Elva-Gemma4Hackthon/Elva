@@ -150,7 +150,7 @@ object FormFillEngine {
             actions.add(NextAction(
                 action = ActionType.ASK_CONFIRMATION,
                 targetDescription = "stop_before_submit",
-                voicePrompt = "信息已经填好了，但是老白帮不了您点"${blockedNames}"这个按钮。请您自己检查一遍信息，确认无误后再点提交哦~",
+                voicePrompt = "信息已经填好了，但是老白帮不了您点'${blockedNames}'这个按钮。请您自己检查一遍信息，确认无误后再点提交哦~",
                 explanation = "停止在提交前，提示用户自己确认",
                 riskLevel = RiskLevel.HIGH,
                 source = "form_engine",

@@ -47,6 +47,9 @@ class ElvaAccessibilityService : AccessibilityService() {
         }
 
         Log.d(TAG, "Elva Accessibility Service connected")
+
+        // Start Always-On Sentinel for passive risk monitoring
+        com.elva.laobai.sentinel.AlwaysOnSentinel.startMonitoring()
     }
 
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {
