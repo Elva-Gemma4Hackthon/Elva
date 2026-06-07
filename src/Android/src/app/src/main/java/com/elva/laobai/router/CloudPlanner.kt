@@ -18,6 +18,9 @@ import kotlinx.coroutines.launch
 object CloudPlanner {
     private const val TAG = "CloudPlanner"
 
+    // NOTE: Despite the name, ALL inference runs on-device via ElvaInferenceBridge + Gemma 4.
+    // No data is ever sent to any cloud service.
+
     data class PlannerState(
         val isPlanning: Boolean = false,
         val lastAction: NextAction? = null,
@@ -53,19 +56,19 @@ object CloudPlanner {
                 observation = observation,
                 userText = userText,
                 onAction = { action ->
-                    _state.value = PlannerState(isPlanning = false, lastAction = action, lastSource = "cloud")
+                    _state.value = PlannerState(isPlanning = false, lastAction = action, lastSource = "on_device")
                     callback.onAction(action)
                 },
                 onFallback = { text ->
                     val fallbackAction = NextAction(
                         action = ActionType.SPEAK_ONLY,
-                        targetDescription = "cloud_fallback",
+                        targetDescription = "on_device_fallback",
                         voicePrompt = text,
-                        explanation = "Cloud returned unstructured text",
+                        explanation = "On-device model returned unstructured text",
                         riskLevel = NextAction.RiskLevel.LOW,
-                        source = "cloud_text",
+                        source = "on_device_text",
                     )
-                    _state.value = PlannerState(isPlanning = false, lastAction = fallbackAction, lastSource = "cloud_text")
+                    _state.value = PlannerState(isPlanning = false, lastAction = fallbackAction, lastSource = "on_device_text")
                     callback.onFallback(text)
                 },
                 onError = { error ->

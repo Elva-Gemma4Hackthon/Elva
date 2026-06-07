@@ -137,29 +137,18 @@ object LocalRouter {
         }
 
         // Step 6: Health consultation routing (Case 2)
+        // All health triage is handled locally via HealthTriageEngine + on-device Gemma 4.
+        // The reason starts with "health_query" so ElvaVoiceViewModel can route to the state machine.
         if (userIntent != null && isHealthRelated(userIntent)) {
-            val hasSensitivePii = observation.sensitiveFieldCategories.contains("pii_detected")
-            return if (hasSensitivePii || !observation.cloudSafe) {
-                Log.d(TAG, "LOCAL_ONLY: Health query with PII — local only")
-                RoutingDecision(
-                    route = Route.LOCAL_ONLY,
-                    complexity = Complexity.HIGH,
-                    reason = "health_query_with_pii_local_only",
-                    containsUnredactedPii = true,
-                    cloudSafe = false,
-                    localFallback = true,
-                )
-            } else {
-                Log.d(TAG, "CLOUD_PLANNER: Health query, cloudSafe — route to cloud")
-                RoutingDecision(
-                    route = Route.CLOUD_PLANNER,
-                    complexity = Complexity.HIGH,
-                    reason = "health_query_routed_to_cloud",
-                    containsUnredactedPii = false,
-                    cloudSafe = true,
-                    localFallback = true,
-                )
-            }
+            Log.d(TAG, "LOCAL_ONLY: Health query — handled by on-device Gemma 4 triage")
+            return RoutingDecision(
+                route = Route.LOCAL_ONLY,
+                complexity = Complexity.HIGH,
+                reason = "health_query_local_only",
+                containsUnredactedPii = false,
+                cloudSafe = true,
+                localFallback = true,
+            )
         }
 
         // Step 7: Check if we need to ask user for missing info
