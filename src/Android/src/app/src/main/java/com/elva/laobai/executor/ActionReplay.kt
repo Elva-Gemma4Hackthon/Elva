@@ -8,6 +8,10 @@ import android.util.Log
 import com.elva.laobai.guard.SafetyGuard
 import com.elva.laobai.models.NextAction
 import com.elva.laobai.models.NextAction.ActionType
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import java.util.UUID
 
 /**
@@ -124,7 +128,7 @@ object ActionReplay {
         val total = actions.size
         val results = mutableListOf<ActionExecutor.ExecutionResult>()
 
-        kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.Main).launch {
+        CoroutineScope(Dispatchers.Main).launch {
             for ((index, action) in actions.withIndex()) {
                 // Safety check before each replay action
                 val observation = com.elva.laobai.observer.ScreenObserver.observe()

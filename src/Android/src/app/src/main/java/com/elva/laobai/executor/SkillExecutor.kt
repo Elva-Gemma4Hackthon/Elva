@@ -71,7 +71,7 @@ object SkillExecutor {
     private val skills = mutableMapOf<String, SkillDef>()
 
     /** Execution history for replay support. */
-    private val executionHistory = mutableListOf<Pair<SkillDef, Map<String, String>>>>()
+    private val executionHistory = mutableListOf<Pair<SkillDef, Map<String, String>>>()
     private const val MAX_HISTORY = 50
 
     init {
@@ -130,7 +130,7 @@ object SkillExecutor {
                             listOf(NextAction(
                                 action = ActionType.SPEAK_ONLY,
                                 targetDescription = name,
-                                voicePrompt = "姝ｅ湪鎵ц $name...",
+                                voicePrompt = "正在执行 $name...",
                                 explanation = desc,
                                 riskLevel = risk,
                                 source = "skill",
@@ -182,8 +182,8 @@ object SkillExecutor {
 
         for (param in skill.requiredParams + skill.optionalParams.keys) {
             val patterns = listOf(
-                Regex("(?i)${Regex.escape(param)}[锛?\\s]+(\\S+)"),
-                Regex("(?i)${Regex.escape(param)}\\s*鏄?\\s*(\\S+)"),
+                Regex("(?i)${Regex.escape(param)}[：是\\s]+(\\S+)"),
+                Regex("(?i)${Regex.escape(param)}\\s*是\\s*(\\S+)"),
             )
             for (pattern in patterns) {
                 val match = pattern.find(userText)
@@ -219,7 +219,7 @@ object SkillExecutor {
                 success = false,
                 completedActions = 0,
                 totalActions = 0,
-                message = "鏈壘鍒版妧鑳? $skillId",
+                message = "未找到技能: $skillId",
             ))
             return
         }
@@ -231,7 +231,7 @@ object SkillExecutor {
                 success = false,
                 completedActions = 0,
                 totalActions = 0,
-                message = "鎶€鑳?$skillId 娌℃湁鍙墽琛岀殑鍔ㄤ綔",
+                message = "技能 $skillId 没有可执行的动作",
             ))
             return
         }
@@ -255,14 +255,14 @@ object SkillExecutor {
                     success = false,
                     completedActions = completedCount,
                     totalActions = totalActions,
-                    message = "鍔ㄤ綔琚畨鍏ㄧ瓥鐣ラ樆姝? ${validation.reason}",
+                    message = "动作被安全策略阻止: ${validation.reason}",
                     failedAction = action,
                 ))
                 return
             }
 
             // Step 2: Check with SafetyGuard
-            val guardResult = SafetyGuard.evaluate(action)
+            val guardResult = SafetyGuard.evaluate(action, null)
             if (guardResult.decision == com.elva.laobai.models.GuardDecision.GuardResult.DENY) {
                 Log.w(TAG, "Skill action denied by SafetyGuard: ${guardResult.reason}")
                 onComplete(SkillResult(
@@ -270,7 +270,7 @@ object SkillExecutor {
                     success = false,
                     completedActions = completedCount,
                     totalActions = totalActions,
-                    message = "瀹夊叏瀹堝崼鎷掔粷: ${guardResult.reason}",
+                    message = "安全守卫拒绝: ${guardResult.reason}",
                     failedAction = action,
                 ))
                 return
@@ -288,7 +288,7 @@ object SkillExecutor {
                         success = false,
                         completedActions = completedCount,
                         totalActions = totalActions,
-                        message = "鍔ㄤ綔鎵ц澶辫触: ${result.message}",
+                        message = "动作执行失败: ${result.message}",
                         failedAction = action,
                     ))
                     return@execute
@@ -300,7 +300,7 @@ object SkillExecutor {
                         success = true,
                         completedActions = completedCount,
                         totalActions = totalActions,
-                        message = "鎶€鑳?${skill.displayName} 鎵ц瀹屾垚",
+                        message = "技能${skill.displayName} 执行完成",
                     ))
                 }
             }
@@ -323,7 +323,7 @@ object SkillExecutor {
                 success = false,
                 completedActions = 0,
                 totalActions = 0,
-                message = "鏈尮閰嶅埌浠讳綍鎶€鑳?,
+                message = "未匹配到任何技能",
             ))
             return
         }
@@ -344,7 +344,7 @@ object SkillExecutor {
 
     /** Get function calling tool definitions for LLM. */
     fun getToolDefinitionsForLlm(): String {
-        return ElvaFunctions.buildToolsJsonArray()
+        return ElvaFunctions.buildToolsJsonArray().toString()
     }
 
     // ===== Built-in Skill Definitions =====
@@ -353,57 +353,57 @@ object SkillExecutor {
         // Skill 1: Pay Electric Bill
         registerSkill(SkillDef(
             id = "pay_electric_bill",
-            displayName = "浜ょ數璐?,
-            description = "閫氳繃鏀粯瀹濈即绾崇數璐?,
+            displayName = "交电费",
+            description = "通过支付宝缴纳电费",
             requiredParams = listOf("account_number"),
             optionalParams = mapOf("city" to ""),
             riskLevel = RiskLevel.MEDIUM,
-            triggerKeywords = listOf("浜ょ數璐?, "鐢佃垂", "缂寸數璐?, "缂寸撼鐢佃垂"),
+            triggerKeywords = listOf("交电费", "电费", "缴电费", "缴纳电费"),
             buildActions = { params ->
                 val account = params["account_number"] ?: ""
                 val actions = mutableListOf<NextAction>()
                 actions.add(NextAction(
                     action = ActionType.OPEN_APP,
-                    targetDescription = "鏀粯瀹?,
-                    voicePrompt = "姝ｅ湪鎵撳紑鏀粯瀹濈敓娲荤即璐?..",
-                    explanation = "鎵撳紑鏀粯瀹濈敓娲荤即璐?,
+                    targetDescription = "支付宝",
+                    voicePrompt = "正在打开支付宝生活缴费...",
+                    explanation = "打开支付宝生活缴费",
                     riskLevel = RiskLevel.ZERO, source = "skill",
                 ))
                 actions.add(NextAction(
                     action = ActionType.SPEAK_ONLY,
                     targetDescription = "",
-                    voicePrompt = "璇风◢鍊欙紝姝ｅ湪鍔犺浇缂磋垂椤甸潰...",
-                    explanation = "绛夊緟鍔犺浇",
+                    voicePrompt = "请稍候，正在加载缴费页面...",
+                    explanation = "等待加载",
                     riskLevel = RiskLevel.ZERO, source = "skill",
                 ))
                 actions.add(NextAction(
                     action = ActionType.CLICK_ELEMENT,
-                    targetDescription = "鐢佃垂",
-                    voicePrompt = "姝ｅ湪閫夋嫨鐢佃垂...",
-                    explanation = "鐐瑰嚮鐢佃垂閫夐」",
+                    targetDescription = "电费",
+                    voicePrompt = "正在选择电费...",
+                    explanation = "点击电费选项",
                     riskLevel = RiskLevel.LOW, source = "skill",
                 ))
                 if (account.isNotEmpty()) {
                     actions.add(NextAction(
                         action = ActionType.TYPE_TEXT,
-                        targetDescription = "鎴峰彿", value = account,
-                        voicePrompt = "姝ｅ湪杈撳叆鎴峰彿...",
-                        explanation = "杈撳叆鐢佃垂鎴峰彿",
+                        targetDescription = "户号", value = account,
+                        voicePrompt = "正在输入户号...",
+                        explanation = "输入电费户号",
                         riskLevel = RiskLevel.MEDIUM, source = "skill",
                     ))
                 }
                 actions.add(NextAction(
                     action = ActionType.CLICK_ELEMENT,
-                    targetDescription = "鏌ヨ",
-                    voicePrompt = "姝ｅ湪鏌ヨ璐﹀崟...",
-                    explanation = "鐐瑰嚮鏌ヨ",
+                    targetDescription = "查询",
+                    voicePrompt = "正在查询账单...",
+                    explanation = "点击查询",
                     riskLevel = RiskLevel.LOW, source = "skill",
                 ))
                 actions.add(NextAction(
                     action = ActionType.ASK_CONFIRMATION,
                     targetDescription = "",
-                    voicePrompt = "璐﹀崟宸叉煡璇㈠埌锛岃鍦ㄦ墜鏈轰笂纭骞跺畬鎴愭敮浠?,
-                    explanation = "绛夊緟鐢ㄦ埛纭",
+                    voicePrompt = "账单已查询到，请在手机上确认并完成支付",
+                    explanation = "等待用户确认",
                     riskLevel = RiskLevel.HIGH, source = "skill",
                 ))
                 actions
@@ -413,50 +413,50 @@ object SkillExecutor {
         // Skill 2: Pay Water Bill
         registerSkill(SkillDef(
             id = "pay_water_bill",
-            displayName = "浜ゆ按璐?,
-            description = "閫氳繃鏀粯瀹濈即绾虫按璐?,
+            displayName = "交水费",
+            description = "通过支付宝缴纳水费",
             requiredParams = listOf("account_number"),
             optionalParams = mapOf("city" to ""),
             riskLevel = RiskLevel.MEDIUM,
-            triggerKeywords = listOf("浜ゆ按璐?, "姘磋垂", "缂存按璐?, "缂寸撼姘磋垂"),
+            triggerKeywords = listOf("交水费", "水费", "缴水费", "缴纳水费"),
             buildActions = { params ->
                 val account = params["account_number"] ?: ""
                 val actions = mutableListOf<NextAction>()
                 actions.add(NextAction(
                     action = ActionType.OPEN_APP,
-                    targetDescription = "鏀粯瀹?,
-                    voicePrompt = "姝ｅ湪鎵撳紑鏀粯瀹濈敓娲荤即璐?..",
-                    explanation = "鎵撳紑鏀粯瀹?,
+                    targetDescription = "支付宝",
+                    voicePrompt = "正在打开支付宝生活缴费...",
+                    explanation = "打开支付宝",
                     riskLevel = RiskLevel.ZERO, source = "skill",
                 ))
                 actions.add(NextAction(
                     action = ActionType.CLICK_ELEMENT,
-                    targetDescription = "姘磋垂",
-                    voicePrompt = "姝ｅ湪閫夋嫨姘磋垂...",
-                    explanation = "鐐瑰嚮姘磋垂閫夐」",
+                    targetDescription = "水费",
+                    voicePrompt = "正在选择水费...",
+                    explanation = "点击水费选项",
                     riskLevel = RiskLevel.LOW, source = "skill",
                 ))
                 if (account.isNotEmpty()) {
                     actions.add(NextAction(
                         action = ActionType.TYPE_TEXT,
-                        targetDescription = "鎴峰彿", value = account,
-                        voicePrompt = "姝ｅ湪杈撳叆姘磋垂鎴峰彿...",
-                        explanation = "杈撳叆姘磋垂鎴峰彿",
+                        targetDescription = "户号", value = account,
+                        voicePrompt = "正在输入水费户号...",
+                        explanation = "输入水费户号",
                         riskLevel = RiskLevel.MEDIUM, source = "skill",
                     ))
                 }
                 actions.add(NextAction(
                     action = ActionType.CLICK_ELEMENT,
-                    targetDescription = "鏌ヨ",
-                    voicePrompt = "姝ｅ湪鏌ヨ姘磋垂璐﹀崟...",
-                    explanation = "鏌ヨ璐﹀崟",
+                    targetDescription = "查询",
+                    voicePrompt = "正在查询水费账单...",
+                    explanation = "查询账单",
                     riskLevel = RiskLevel.LOW, source = "skill",
                 ))
                 actions.add(NextAction(
                     action = ActionType.ASK_CONFIRMATION,
                     targetDescription = "",
-                    voicePrompt = "姘磋垂璐﹀崟宸叉煡璇㈠埌锛岃鍦ㄦ墜鏈轰笂纭骞跺畬鎴愭敮浠?,
-                    explanation = "绛夊緟鐢ㄦ埛纭",
+                    voicePrompt = "水费账单已查询到，请在手机上确认并完成支付",
+                    explanation = "等待用户确认",
                     riskLevel = RiskLevel.HIGH, source = "skill",
                 ))
                 actions
@@ -466,36 +466,36 @@ object SkillExecutor {
         // Skill 3: Book Hospital
         registerSkill(SkillDef(
             id = "book_hospital",
-            displayName = "棰勭害鎸傚彿",
-            description = "棰勭害鍖婚櫌鎸傚彿",
+            displayName = "预约挂号",
+            description = "预约医院挂号",
             requiredParams = listOf("hospital"),
             optionalParams = mapOf("department" to "", "date" to ""),
             riskLevel = RiskLevel.LOW,
-            triggerKeywords = listOf("鎸傚彿", "棰勭害鎸傚彿", "棰勭害鍖婚櫌", "鐪嬬梾鎸傚彿"),
+            triggerKeywords = listOf("挂号", "预约挂号", "预约医院", "看病挂号"),
             buildActions = { params ->
                 val hospital = params["hospital"] ?: ""
                 val department = params["department"] ?: ""
                 val actions = mutableListOf<NextAction>()
                 actions.add(NextAction(
                     action = ActionType.OPEN_APP,
-                    targetDescription = "鏀粯瀹?,
-                    voicePrompt = "姝ｅ湪鎵撳紑鎸傚彿鏈嶅姟...",
-                    explanation = "鎵撳紑鍖荤枟鎸傚彿",
+                    targetDescription = "支付宝",
+                    voicePrompt = "正在打开挂号服务...",
+                    explanation = "打开医疗挂号",
                     riskLevel = RiskLevel.ZERO, source = "skill",
                 ))
                 actions.add(NextAction(
                     action = ActionType.CLICK_ELEMENT,
-                    targetDescription = "鍖荤枟",
-                    voicePrompt = "姝ｅ湪杩涘叆鍖荤枟鏈嶅姟...",
-                    explanation = "鐐瑰嚮鍖荤枟鍋ュ悍",
+                    targetDescription = "医疗",
+                    voicePrompt = "正在进入医疗服务...",
+                    explanation = "点击医疗健康",
                     riskLevel = RiskLevel.ZERO, source = "skill",
                 ))
                 if (hospital.isNotEmpty()) {
                     actions.add(NextAction(
                         action = ActionType.TYPE_TEXT,
-                        targetDescription = "鎼滅储", value = hospital,
-                        voicePrompt = "姝ｅ湪鎼滅储 $hospital ...",
-                        explanation = "鎼滅储鍖婚櫌",
+                        targetDescription = "搜索", value = hospital,
+                        voicePrompt = "正在搜索 $hospital ...",
+                        explanation = "搜索医院",
                         riskLevel = RiskLevel.LOW, source = "skill",
                     ))
                 }
@@ -503,16 +503,16 @@ object SkillExecutor {
                     actions.add(NextAction(
                         action = ActionType.CLICK_ELEMENT,
                         targetDescription = department,
-                        voicePrompt = "姝ｅ湪閫夋嫨 $department 绉戝...",
-                        explanation = "閫夋嫨绉戝",
+                        voicePrompt = "正在选择 $department 科室...",
+                        explanation = "选择科室",
                         riskLevel = RiskLevel.LOW, source = "skill",
                     ))
                 }
                 actions.add(NextAction(
                     action = ActionType.ASK_CONFIRMATION,
                     targetDescription = "",
-                    voicePrompt = "璇烽€夋嫨灏辫瘖鏃ユ湡鍜屽尰鐢燂紝鐒跺悗鍦ㄦ墜鏈轰笂瀹屾垚棰勭害",
-                    explanation = "绛夊緟鐢ㄦ埛瀹屾垚棰勭害",
+                    voicePrompt = "请选择就诊日期和医生，然后在手机上完成预约",
+                    explanation = "等待用户完成预约",
                     riskLevel = RiskLevel.MEDIUM, source = "skill",
                 ))
                 actions
@@ -522,18 +522,18 @@ object SkillExecutor {
         // Skill 4: Open App (generic)
         registerSkill(SkillDef(
             id = "open_app",
-            displayName = "鎵撳紑搴旂敤",
-            description = "鎵撳紑鎸囧畾鐨勬墜鏈哄簲鐢?,
+            displayName = "打开应用",
+            description = "打开指定的手机应用",
             requiredParams = listOf("app_name"),
             riskLevel = RiskLevel.ZERO,
-            triggerKeywords = listOf("鎵撳紑", "寮€鍚?, "鍚姩", "杩愯"),
+            triggerKeywords = listOf("打开", "开启", "启动", "运行"),
             buildActions = { params ->
                 val appName = params["app_name"] ?: ""
                 listOf(NextAction(
                     action = ActionType.OPEN_APP,
                     targetDescription = appName,
-                    voicePrompt = "姝ｅ湪鎵撳紑 $appName ...",
-                    explanation = "鎵撳紑搴旂敤: $appName",
+                    voicePrompt = "正在打开 $appName ...",
+                    explanation = "打开应用: $appName",
                     riskLevel = RiskLevel.ZERO, source = "skill",
                 ))
             },
@@ -542,17 +542,17 @@ object SkillExecutor {
         // Skill 5: Go Home
         registerSkill(SkillDef(
             id = "go_home",
-            displayName = "鍥炲埌妗岄潰",
-            description = "鎸変笅Home閿洖鍒版墜鏈烘闈?,
+            displayName = "回到桌面",
+            description = "按下Home键回到手机桌面",
             requiredParams = emptyList(),
             riskLevel = RiskLevel.ZERO,
-            triggerKeywords = listOf("鍥炲埌妗岄潰", "杩斿洖妗岄潰", "涓诲睆骞?, "home"),
+            triggerKeywords = listOf("回到桌面", "返回桌面", "主屏幕", "home"),
             buildActions = { _ ->
                 listOf(NextAction(
                     action = ActionType.NAVIGATE_HOME,
                     targetDescription = "Home",
-                    voicePrompt = "姝ｅ湪鍥炲埌妗岄潰...",
-                    explanation = "鎸変笅Home閿?,
+                    voicePrompt = "正在回到桌面...",
+                    explanation = "按下Home键",
                     riskLevel = RiskLevel.ZERO, source = "skill",
                 ))
             },
@@ -561,17 +561,17 @@ object SkillExecutor {
         // Skill 6: Go Back
         registerSkill(SkillDef(
             id = "go_back",
-            displayName = "杩斿洖涓婁竴椤?,
-            description = "鎸変笅杩斿洖閿洖鍒颁笂涓€椤?,
+            displayName = "返回上一页",
+            description = "按下返回键回到上一页",
             requiredParams = emptyList(),
             riskLevel = RiskLevel.ZERO,
-            triggerKeywords = listOf("杩斿洖", "杩斿洖涓婁竴椤?, "鍚庨€€", "涓婁竴椤?),
+            triggerKeywords = listOf("返回", "返回上一页", "后退", "上一页"),
             buildActions = { _ ->
                 listOf(NextAction(
                     action = ActionType.NAVIGATE_BACK,
                     targetDescription = "Back",
-                    voicePrompt = "姝ｅ湪杩斿洖涓婁竴椤?..",
-                    explanation = "鎸変笅杩斿洖閿?,
+                    voicePrompt = "正在返回上一页...",
+                    explanation = "按下返回键",
                     riskLevel = RiskLevel.ZERO, source = "skill",
                 ))
             },
@@ -611,11 +611,11 @@ object SkillExecutor {
             },
         ))
 
-        // Skill 8: Health Consultation (Case 2 — Trigger health consultation + cloud planning)
+        // Skill 8: Health Consultation (Case 2 — Trigger health consultation via on-device Gemma 4)
         registerSkill(SkillDef(
             id = "health_consultation",
             displayName = "看病咨询",
-            description = "通过6阶段问询了解病情，脱敏后上云推荐科室，并协助挂号",
+            description = "通过6阶段问询了解病情，使用本地 Gemma 4 推荐科室，并协助挂号",
             requiredParams = emptyList(),
             optionalParams = mapOf("symptom" to ""),
             riskLevel = RiskLevel.LOW,
