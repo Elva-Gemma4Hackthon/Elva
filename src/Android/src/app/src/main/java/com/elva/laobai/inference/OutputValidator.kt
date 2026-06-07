@@ -96,7 +96,7 @@ object OutputValidator {
             voicePrompt = voice,
             explanation = explanation,
             riskLevel = riskLevel,
-            source = "cloud",
+            source = "on_device",
         )
     }
 

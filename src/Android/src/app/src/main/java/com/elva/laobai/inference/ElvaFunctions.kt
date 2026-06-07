@@ -82,7 +82,7 @@ object ElvaFunctions {
         }
         sb.appendLine()
         sb.appendLine("请以JSON格式输出你的建议，格式如下：")
-        sb.appendLine("""{"function": "函数名", "target": "目标描述", "value": "输入值(可选)", "voice": "对老人说的话", "explanation": "为什么这样做"}")
+        sb.appendLine("{\"function\": \"name\", \"target\": \"target_desc\", \"value\": \"value_opt\", \"voice\": \"speak_to_user\", \"explanation\": \"reason\"}")
         return sb.toString()
     }
 
@@ -98,7 +98,7 @@ object ElvaFunctions {
     private fun defineClickElement(): FunctionDef {
         return FunctionDef(
             name = "click_element",
-            description = "点击屏幕上的一个按钮或元素。用于帮老人点击"下一步"、"确认"、"提交"等按钮。",
+            description = "Click a button or element on screen. Used to help elderly users click buttons like next, confirm, submit, etc.",
             parameters = JSONObject().apply {
                 put("type", "object")
                 put("properties", JSONObject().apply {
@@ -381,27 +381,27 @@ object ElvaFunctions {
      */
     fun buildSystemPromptFragment(): String {
         return """
-你是「老白」，一个专为老年人设计的语音AI助手。你的任务是帮助老人安全地使用手机。
+You are Lao Bai, a voice AI assistant designed for elderly users. Your task is to help elderly people use their phones safely.
 
-核心原则：
-1. 永远把老人安全放在第一位
-2. 遇到付款、验证码、转账等高风险操作时，必须先用 emergency_stop 或 ask_confirmation
-3. 用简单亲切的语言和老人说话，称呼他们"大爷"或"奶奶"
-4. 不要替老人做高风险决定，只能建议和引导
-5. 如果不确定，宁可多说一句确认，也不要贸然操作
+Core principles:
+1. Always prioritize the safety of elderly users
+2. For high-risk operations like payments, verification codes, and transfers, always use emergency_stop or ask_confirmation first
+3. Speak in simple, warm language, addressing users as 'daye' (uncle) or 'nainai' (grandma)
+4. Never make high-risk decisions for users, only suggest and guide
+5. When unsure, confirm one more time rather than acting hastily
 
 ${buildFunctionListPrompt()}
 
-当前屏幕信息会以JSON格式提供给你，包含以下字段：
-- pageType: 页面类型（payment/form/settings/login/chat等）
-- uiElements: 页面上的UI元素列表
-- sensitiveFieldCategories: 检测到的敏感字段类别
-- hasPaymentKeyword: 是否涉及付款
-- hasOtpField: 是否有验证码
-- hasAuthorizationRequest: 是否有授权请求
-- fraudIndicators: 诈骗指标
+Current screen information will be provided in JSON format with these fields:
+- pageType: page type (payment/form/settings/login/chat etc)
+- uiElements: list of UI elements on the page
+- sensitiveFieldCategories: detected sensitive field categories
+- hasPaymentKeyword: whether payment is involved
+- hasOtpField: whether there is a verification code
+- hasAuthorizationRequest: whether there is an authorization request
+- fraudIndicators: fraud indicators
 
-请根据屏幕信息和老人的语音输入，选择最合适的工具并给出建议。
+Based on the screen information and the user's voice input, select the most appropriate tool and provide recommendations.
         """.trimIndent()
     }
 }
