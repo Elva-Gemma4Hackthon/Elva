@@ -100,6 +100,7 @@ class ElvaVoiceViewModel @Inject constructor(
     }
 
     private fun startListening() {
+        Log.d(TAG, "startListening: begin")
         // Stop TTS when user starts speaking
         com.elva.laobai.ElvaTtsManager.stop()
         _uiState.update {
@@ -112,6 +113,7 @@ class ElvaVoiceViewModel @Inject constructor(
         }
         try {
             speechRecognizer?.startListening(recognizerIntent)
+            Log.d(TAG, "startListening: SpeechRecognizer.startListening called")
         } catch (e: Exception) {
             Log.e(TAG, "Failed to start listening", e)
             _uiState.update { it.copy(isListening = false) }
@@ -119,17 +121,23 @@ class ElvaVoiceViewModel @Inject constructor(
     }
 
     private fun stopListening() {
+        Log.d(TAG, "stopListening: requested")
         speechRecognizer?.stopListening()
         _uiState.update { it.copy(isListening = false) }
     }
 
     // ===== RecognitionListener callbacks =====
 
-    override fun onReadyForSpeech(params: Bundle?) {}
-    override fun onBeginningOfSpeech() {}
+    override fun onReadyForSpeech(params: Bundle?) {
+        Log.d(TAG, "onReadyForSpeech")
+    }
+    override fun onBeginningOfSpeech() {
+        Log.d(TAG, "onBeginningOfSpeech")
+    }
     override fun onRmsChanged(rmsdB: Float) {}
     override fun onBufferReceived(buffer: ByteArray?) {}
     override fun onEndOfSpeech() {
+        Log.d(TAG, "onEndOfSpeech")
         _uiState.update { it.copy(isListening = false) }
     }
 
@@ -138,9 +146,13 @@ class ElvaVoiceViewModel @Inject constructor(
         _uiState.update {
             it.copy(
                 isListening = false,
+                isThinking = false,
                 responseText = when (error) {
                     SpeechRecognizer.ERROR_NO_MATCH -> "没听清，再说一遍好吗？"
                     SpeechRecognizer.ERROR_SPEECH_TIMEOUT -> "没听到声音，再试一次？"
+                    SpeechRecognizer.ERROR_INSUFFICIENT_PERMISSIONS -> "请先允许麦克风权限，再试一次。"
+                    SpeechRecognizer.ERROR_NETWORK,
+                    SpeechRecognizer.ERROR_NETWORK_TIMEOUT -> "语音识别网络异常，请检查网络后重试。"
                     else -> "出了点小问题，再试一次吧"
                 },
             )
@@ -149,7 +161,20 @@ class ElvaVoiceViewModel @Inject constructor(
 
     override fun onResults(results: Bundle?) {
         val matches = results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
-        val text = matches?.firstOrNull() ?: ""
+        val text = matches?.firstOrNull()?.trim().orEmpty()
+        Log.d(TAG, "onResults: recognized='$text'")
+        if (text.isEmpty()) {
+            _uiState.update {
+                it.copy(
+                    isListening = false,
+                    isThinking = false,
+                    recognizedText = "",
+                    responseText = "没听清，再说一遍好吗？",
+                )
+            }
+            return
+        }
+
         _uiState.update { it.copy(isListening = false, recognizedText = text, isThinking = true) }
 
         // If in health consultation mode, route to health handler (Case 2)
@@ -178,10 +203,15 @@ class ElvaVoiceViewModel @Inject constructor(
      * Falls back to local pattern matching if model is not ready.
      */
     private fun processWithGemma4(userText: String) {
+        Log.d(TAG, "processWithGemma4: input='$userText'")
         val bridge = com.elva.laobai.inference.ElvaInferenceBridge
 
         // Step 1: Run through the full pipeline
         val pipelineResult = com.elva.laobai.sentinel.AlwaysOnSentinel.triggerFullPipeline(userText)
+        Log.d(
+            TAG,
+            "processWithGemma4: route=${pipelineResult.routingDecision?.route}, reason=${pipelineResult.routingDecision?.reason}, guard=${pipelineResult.guardDecision.decision}",
+        )
 
         // Step 2: If guard DENIED, speak the denial immediately (highest priority)
         if (pipelineResult.guardDecision.decision ==
@@ -245,34 +275,54 @@ class ElvaVoiceViewModel @Inject constructor(
         }
 
         // Step 5: Cloud route - try Gemma 4 via CloudPlanner
+        val runGemma4 = {
+            Log.d(TAG, "processWithGemma4: invoking CloudPlanner.plan")
+            com.elva.laobai.router.CloudPlanner.plan(
+                observation = pipelineResult.observation,
+                userText = userText,
+                callback = object : com.elva.laobai.router.CloudPlanner.PlannerCallback {
+                    override fun onAction(action: com.elva.laobai.models.NextAction) {
+                        _uiState.update { it.copy(isThinking = false, responseText = action.voicePrompt) }
+                        if (_uiState.value.ttsEnabled) {
+                            com.elva.laobai.ElvaTtsManager.speak(action.voicePrompt)
+                        }
+                    }
+                    override fun onFallback(text: String) {
+                        _uiState.update { it.copy(isThinking = false, responseText = text) }
+                        if (_uiState.value.ttsEnabled) {
+                            com.elva.laobai.ElvaTtsManager.speak(text)
+                        }
+                    }
+                    override fun onError(error: String) {
+                        Log.e(TAG, "CloudPlanner error: $error")
+                        localFallbackResponse(userText)
+                    }
+                },
+            )
+        }
+
         if (!bridge.state.value.isModelReady) {
-            localFallbackResponse(userText)
+            Log.d(TAG, "processWithGemma4: model not ready, calling ensureReady")
+            bridge.ensureReady(
+                systemPrompt = com.elva.laobai.inference.ElvaFunctions.buildSystemPromptFragment(),
+                context = context,
+                onReady = {
+                    Log.d(TAG, "processWithGemma4: ensureReady succeeded")
+                    runGemma4()
+                },
+                onUnavailable = { message ->
+                    Log.w(TAG, "processWithGemma4: ensureReady unavailable: $message")
+                    _uiState.update { it.copy(isThinking = false, responseText = message) }
+                    if (_uiState.value.ttsEnabled) {
+                        com.elva.laobai.ElvaTtsManager.speak(message)
+                    }
+                },
+            )
             return
         }
 
-        // Use CloudPlanner for async function calling inference
-        com.elva.laobai.router.CloudPlanner.plan(
-            observation = pipelineResult.observation,
-            userText = userText,
-            callback = object : com.elva.laobai.router.CloudPlanner.PlannerCallback {
-                override fun onAction(action: com.elva.laobai.models.NextAction) {
-                    _uiState.update { it.copy(isThinking = false, responseText = action.voicePrompt) }
-                    if (_uiState.value.ttsEnabled) {
-                        com.elva.laobai.ElvaTtsManager.speak(action.voicePrompt)
-                    }
-                }
-                override fun onFallback(text: String) {
-                    _uiState.update { it.copy(isThinking = false, responseText = text) }
-                    if (_uiState.value.ttsEnabled) {
-                        com.elva.laobai.ElvaTtsManager.speak(text)
-                    }
-                }
-                override fun onError(error: String) {
-                    Log.e(TAG, "CloudPlanner error: $error")
-                    localFallbackResponse(userText)
-                }
-            },
-        )
+        Log.d(TAG, "processWithGemma4: model already ready")
+        runGemma4()
     }
 
     /**

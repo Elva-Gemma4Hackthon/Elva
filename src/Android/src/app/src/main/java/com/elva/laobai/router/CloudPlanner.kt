@@ -43,8 +43,10 @@ object CloudPlanner {
         callback: PlannerCallback,
     ) {
         val bridge = ElvaInferenceBridge
+        Log.d(TAG, "plan: userText='$userText', modelReady=${bridge.state.value.isModelReady}")
 
         if (!bridge.state.value.isModelReady) {
+            Log.w(TAG, "plan: model not ready, using fallback action")
             callback.onAction(generateFallbackAction(userText))
             return
         }
@@ -56,10 +58,12 @@ object CloudPlanner {
                 observation = observation,
                 userText = userText,
                 onAction = { action ->
+                    Log.d(TAG, "plan: onAction action=${action.action}, target=${action.targetDescription}")
                     _state.value = PlannerState(isPlanning = false, lastAction = action, lastSource = "on_device")
                     callback.onAction(action)
                 },
                 onFallback = { text ->
+                    Log.d(TAG, "plan: onFallback text='$text'")
                     val fallbackAction = NextAction(
                         action = ActionType.SPEAK_ONLY,
                         targetDescription = "on_device_fallback",
@@ -72,6 +76,7 @@ object CloudPlanner {
                     callback.onFallback(text)
                 },
                 onError = { error ->
+                    Log.e(TAG, "plan: onError error=$error")
                     _state.value = PlannerState(isPlanning = false, lastError = error, lastSource = "error")
                     callback.onError(error)
                     callback.onAction(generateFallbackAction(userText))

@@ -4,6 +4,10 @@
  */
 package com.elva.laobai.ui
 
+import android.Manifest
+import android.content.pm.PackageManager
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
@@ -52,10 +56,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.content.ContextCompat
 
 /** Model initialization state for UI banner. */
 enum class ModelState { LOADING, READY, NOT_DOWNLOADED, ERROR }
@@ -77,6 +83,7 @@ fun ElvaVoiceScreen(
     onSettingsClick: () -> Unit = {},
     ttsEnabled: Boolean = true,
     onToggleTts: () -> Unit = {},
+    modelErrorMessage: String? = null,
     // Form filling state (Case 1)
     isFormFilling: Boolean = false,
     formTemplateName: String? = null,
@@ -94,6 +101,22 @@ fun ElvaVoiceScreen(
     modelName: String = "",
     onNavigateToModelManager: () -> Unit = {},
 ) {
+    val context = LocalContext.current
+    var audioPermissionGranted by remember {
+        mutableStateOf(
+            ContextCompat.checkSelfPermission(
+                context,
+                Manifest.permission.RECORD_AUDIO,
+            ) == PackageManager.PERMISSION_GRANTED,
+        )
+    }
+    val audioPermissionLauncher =
+        rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+            audioPermissionGranted = granted
+            if (granted) {
+                onMicClick()
+            }
+        }
     val infiniteTransition = rememberInfiniteTransition(label = "pulse")
     val pulseScale by infiniteTransition.animateFloat(
         initialValue = 1.0f,
@@ -227,15 +250,22 @@ fun ElvaVoiceScreen(
                             containerColor = Color(0xFFFFF8E1),
                         ),
                     ) {
-                        Row(
+                        Column(
                             modifier = Modifier.padding(12.dp),
-                            verticalAlignment = Alignment.CenterVertically,
+                            verticalArrangement = Arrangement.spacedBy(4.dp),
                         ) {
                             Text(
                                 text = "AI 模型加载失败，使用基础模式。",
                                 fontSize = 16.sp,
                                 color = Color(0xFFF57F17),
                             )
+                            if (!modelErrorMessage.isNullOrBlank()) {
+                                Text(
+                                    text = modelErrorMessage,
+                                    fontSize = 14.sp,
+                                    color = Color(0xFF8D6E63),
+                                )
+                            }
                         }
                     }
                 }
@@ -440,7 +470,13 @@ fun ElvaVoiceScreen(
                     )
                 }
                 IconButton(
-                    onClick = onMicClick,
+                    onClick = {
+                        if (audioPermissionGranted) {
+                            onMicClick()
+                        } else {
+                            audioPermissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
+                        }
+                    },
                     modifier = Modifier.size(160.dp),
                     colors = IconButtonDefaults.iconButtonColors(
                         containerColor = if (isListening)

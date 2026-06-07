@@ -242,6 +242,7 @@ fun GalleryNavHost(
         onSettingsClick = { navController.navigate(ROUTE_USER_MEMORY) },
         ttsEnabled = uiState.ttsEnabled,
         onToggleTts = { voiceViewModel.toggleTts() },
+        modelErrorMessage = bridgeState.lastError,
         // Form filling progress (Case 1)
         isFormFilling = uiState.isFormFilling,
         formTemplateName = uiState.formTemplateName,

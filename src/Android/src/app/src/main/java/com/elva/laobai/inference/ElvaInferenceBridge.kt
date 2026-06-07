@@ -32,6 +32,7 @@ object ElvaInferenceBridge {
         val isModelReady: Boolean = false,
         val modelName: String = "",
         val isInitializing: Boolean = false,
+        val lastError: String? = null,
     )
 
     private val _state = MutableStateFlow(InferenceState())
@@ -53,7 +54,9 @@ object ElvaInferenceBridge {
         context: Context,
         onReady: () -> Unit,
     ) {
+        Log.d(TAG, "initialize: requested model=${model.name}, alreadyInitialized=$isInitialized, currentModel=${currentModel?.name}")
         if (isInitialized && currentModel?.name == model.name) {
+            Log.d(TAG, "initialize: reuse existing initialized model ${model.name}")
             onReady()
             return
         }
@@ -62,6 +65,7 @@ object ElvaInferenceBridge {
         _state.value = InferenceState(
             isInitializing = true,
             modelName = model.name,
+            lastError = null,
         )
 
         val elvaSystemPrompt = Contents.of(systemPrompt)
@@ -77,6 +81,7 @@ object ElvaInferenceBridge {
                     _state.value = _state.value.copy(
                         isInitializing = false,
                         isModelReady = error.isEmpty(),
+                        lastError = error.ifEmpty { null },
                     )
                     if (error.isEmpty()) {
                         isInitialized = true
@@ -99,6 +104,38 @@ object ElvaInferenceBridge {
      * @param onDone Called when inference is complete with the full response.
      * @param onError Called if inference fails.
      */
+    fun ensureReady(
+        systemPrompt: String,
+        context: Context,
+        onReady: () -> Unit,
+        onUnavailable: (String) -> Unit,
+    ) {
+        Log.d(TAG, "ensureReady: ready=${_state.value.isModelReady}, initializing=${_state.value.isInitializing}, currentModel=${currentModel?.name}, lastError=${_state.value.lastError}")
+        if (_state.value.isModelReady) {
+            onReady()
+            return
+        }
+        if (_state.value.isInitializing) {
+            onUnavailable("AI 模型正在加载，请稍候")
+            return
+        }
+
+        val model = currentModel
+        if (model == null) {
+            Log.w(TAG, "ensureReady: no current model available")
+            onUnavailable("未找到可用的 Gemma 模型，请先下载并加载模型")
+            return
+        }
+
+        Log.d(TAG, "ensureReady: initializing model ${model.name}")
+        initialize(
+            model = model,
+            systemPrompt = systemPrompt,
+            context = context,
+            onReady = onReady,
+        )
+    }
+
     fun infer(
         input: String,
         onPartialResult: (String) -> Unit,
