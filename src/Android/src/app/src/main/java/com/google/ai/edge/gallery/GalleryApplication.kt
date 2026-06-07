@@ -18,6 +18,7 @@ package com.google.ai.edge.gallery
 
 import android.app.Application
 import com.elva.laobai.ElvaTtsManager
+import com.elva.laobai.memory.LocalUserMemory
 import com.google.ai.edge.gallery.data.DataStoreRepository
 import com.google.ai.edge.gallery.notifications.NotificationScheduleManager
 import com.google.ai.edge.gallery.ui.theme.ThemeSettings
@@ -51,6 +52,9 @@ class GalleryApplication : Application() {
 
     // Elva LaoBai: Initialize TTS for voice responses.
     ElvaTtsManager.initialize(this)
+
+    // Elva LaoBai: Initialize encrypted user memory store.
+    LocalUserMemory.initialize(this)
   }
 
   override fun onTerminate() {

@@ -61,7 +61,7 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntOffset
-import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
@@ -99,6 +99,7 @@ private const val ROUTE_MODEL = "route_model"
 private const val ROUTE_BENCHMARK = "benchmark"
 private const val ROUTE_MODEL_MANAGER = "model_manager"
 private const val ROUTE_NOTIFICATIONS = "notifications"
+private const val ROUTE_USER_MEMORY = "user_memory"
 private const val ENTER_ANIMATION_DURATION_MS = 500
 private val ENTER_ANIMATION_EASING = EaseOutExpo
 private const val ENTER_ANIMATION_DELAY_MS = 100
@@ -194,6 +195,41 @@ fun GalleryNavHost(
     composable(route = "elva_voice") {
       val voiceViewModel: com.elva.laobai.ui.ElvaVoiceViewModel = hiltViewModel()
       val uiState by voiceViewModel.uiState.collectAsState()
+      val context = LocalContext.current
+
+      // Auto-initialize Gemma 4 model when downloaded models change.
+      LaunchedEffect(modelManagerUiState.modelDownloadStatus) {
+        val bridge = com.elva.laobai.inference.ElvaInferenceBridge
+        if (bridge.state.value.isModelReady || bridge.state.value.isInitializing) {
+          return@LaunchedEffect
+        }
+        val downloadedModels = modelManagerViewModel.getAllDownloadedModels()
+        val targetModel = downloadedModels.firstOrNull {
+          it.name.contains("gemma-4-e4b", ignoreCase = true)
+        } ?: downloadedModels.firstOrNull {
+          it.name.contains("gemma-4-e2b", ignoreCase = true)
+        } ?: downloadedModels.firstOrNull {
+          it.name.contains("gemma", ignoreCase = true)
+        }
+        if (targetModel != null) {
+          Log.d(TAG, "Auto-initializing Elva with model: ${targetModel.name}")
+          bridge.initialize(
+            model = targetModel,
+            systemPrompt = com.elva.laobai.inference.ElvaFunctions.buildSystemPromptFragment(),
+            context = context,
+            onReady = { Log.d(TAG, "Elva model ready: ${targetModel.name}") },
+          )
+        }
+      }
+
+      // Observe model state for UI banner.
+      val bridgeState by com.elva.laobai.inference.ElvaInferenceBridge.state.collectAsState()
+      val modelState = when {
+        bridgeState.isModelReady -> com.elva.laobai.ui.ModelState.READY
+        bridgeState.isInitializing -> com.elva.laobai.ui.ModelState.LOADING
+        modelManagerViewModel.getAllDownloadedModels().isEmpty() -> com.elva.laobai.ui.ModelState.NOT_DOWNLOADED
+        else -> com.elva.laobai.ui.ModelState.ERROR
+      }
 
       com.elva.laobai.ui.ElvaVoiceScreen(
         isListening = uiState.isListening,
@@ -203,9 +239,32 @@ fun GalleryNavHost(
         isExecuting = uiState.isExecuting,
         executionStatus = uiState.executionStatus,
         onMicClick = { voiceViewModel.toggleListening() },
-        onSettingsClick = { navController.navigate(ROUTE_HOMESCREEN) },
+        onSettingsClick = { navController.navigate(ROUTE_USER_MEMORY) },
         ttsEnabled = uiState.ttsEnabled,
         onToggleTts = { voiceViewModel.toggleTts() },
+        // Form filling progress (Case 1)
+        isFormFilling = uiState.isFormFilling,
+        formTemplateName = uiState.formTemplateName,
+        formProgress = uiState.formProgress,
+        // Health consultation progress (Case 2)
+        isHealthConsultation = uiState.isHealthConsultation,
+        healthTriageStage = uiState.healthTriageStage,
+        healthTriageQuestion = uiState.healthTriageQuestion,
+        // Accessibility service status
+        isAccessibilityEnabled = com.elva.laobai.accessibility.ElvaAccessibilityService.isRunning(),
+        // Quick action direct text injection
+        onQuickAction = { text -> voiceViewModel.processQuickAction(text) },
+        // Model state for UI banner
+        modelState = modelState,
+        modelName = bridgeState.modelName,
+        onNavigateToModelManager = { navController.navigate(ROUTE_MODEL_MANAGER) },
+      )
+    }
+
+    // User Memory Settings — personal info for form filling & health.
+    composable(route = ROUTE_USER_MEMORY) {
+      com.elva.laobai.ui.UserMemorySettingsScreen(
+        onBack = { navController.popBackStack() },
       )
     }
 

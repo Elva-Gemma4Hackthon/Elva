@@ -84,6 +84,21 @@ class ElvaVoiceViewModel @Inject constructor(
         com.elva.laobai.ElvaTtsManager.setEnabled(newEnabled)
     }
 
+    /**
+     * Process a quick action chip click — directly inject text
+     * into the pipeline without requiring microphone input.
+     */
+    fun processQuickAction(text: String) {
+        _uiState.update {
+            it.copy(
+                recognizedText = text,
+                isThinking = true,
+                responseText = "",
+            )
+        }
+        processWithGemma4(text)
+    }
+
     private fun startListening() {
         // Stop TTS when user starts speaking
         com.elva.laobai.ElvaTtsManager.stop()
@@ -190,42 +205,42 @@ class ElvaVoiceViewModel @Inject constructor(
             return
         }
 
-        // Step 4: Check routing — if LOCAL_ONLY, use local response or execute
         val routing = pipelineResult.routingDecision
-        if (routing?.route == com.elva.laobai.models.RoutingDecision.Route.LOCAL_ONLY ||
-            routing?.route == com.elva.laobai.models.RoutingDecision.Route.STOP) {
 
-            if (routing.route == com.elva.laobai.models.RoutingDecision.Route.STOP) {
-                val stopMessage = pipelineResult.nextAction.voicePrompt
-                _uiState.update { it.copy(isThinking = false, responseText = stopMessage) }
-                if (_uiState.value.ttsEnabled) {
-                    com.elva.laobai.ElvaTtsManager.speak(stopMessage)
-                }
-                return
+        // Step 4 (highest priority): STOP route
+        if (routing?.route == com.elva.laobai.models.RoutingDecision.Route.STOP) {
+            val stopMessage = pipelineResult.nextAction.voicePrompt
+            _uiState.update { it.copy(isThinking = false, responseText = stopMessage) }
+            if (_uiState.value.ttsEnabled) {
+                com.elva.laobai.ElvaTtsManager.speak(stopMessage)
             }
+            return
+        }
 
-            // V5: If guard ALLOWED and action is executable, run it
+        // Step 4.5: Health consultation handling (Case 2)
+        // Must be checked BEFORE LOCAL_ONLY because health queries often route as LOCAL_ONLY
+        if (routing?.reason?.startsWith("health_query") == true ||
+            isHealthRelatedText(userText)) {
+            handleHealthConsultation(userText)
+            return
+        }
+
+        // Step 4.6: Form filling handling (Case 1)
+        if (userText.contains("填表") || userText.contains("填写表单") ||
+            userText.contains("帮我填") || userText.contains("填一下")) {
+            handleFormFilling(pipelineResult.observation)
+            return
+        }
+
+        // Step 4.7: LOCAL_ONLY route — execute or speak locally
+        if (routing?.route == com.elva.laobai.models.RoutingDecision.Route.LOCAL_ONLY) {
             val action = pipelineResult.nextAction
             if (pipelineResult.guardDecision.decision == com.elva.laobai.models.GuardDecision.GuardResult.ALLOW &&
                 action.action != com.elva.laobai.models.NextAction.ActionType.SPEAK_ONLY) {
                 executeAction(action)
                 return
             }
-
-            // Local response (speak-only)
             localFallbackResponse(userText)
-            return
-        }
-
-        // Step 4.5: Health consultation handling (Case 2)
-        if (routing?.reason?.startsWith("health_query") == true) {
-            handleHealthConsultation(userText)
-            return
-        }
-
-        // Step 4.6: Form filling handling (Case 1)
-        if (userText.contains("填表") || userText.contains("填写表单") || userText.contains("帮我填")) {
-            handleFormFilling(pipelineResult.observation)
             return
         }
 
@@ -258,6 +273,20 @@ class ElvaVoiceViewModel @Inject constructor(
                 }
             },
         )
+    }
+
+    /**
+     * Quick check if user text is health-related (for routing priority).
+     * Duplicates HealthTriageEngine keywords for fast pre-check.
+     */
+    private fun isHealthRelatedText(text: String): Boolean {
+        val healthKeywords = listOf(
+            "不舒服", "疼", "痛", "难受", "头晕", "恶心",
+            "发烧", "咳嗽", "胸闷", "胃", "肚子", "腰",
+            "腿", "头", "嗓子", "看病", "医院", "挂号",
+            "症状", "过敏", "痒", "出血", "肿", "晕",
+        )
+        return healthKeywords.any { text.contains(it) }
     }
 
     /**
@@ -384,11 +413,15 @@ class ElvaVoiceViewModel @Inject constructor(
                                 isThinking = false,
                                 healthTriageStage = "COMPLETE",
                                 isHealthConsultation = false,
-                                responseText = response.summaryText,
+                                responseText = response.userExplanation,
                             )
                         }
                         if (_uiState.value.ttsEnabled) {
-                            com.elva.laobai.ElvaTtsManager.speak(response.summaryText)
+                            com.elva.laobai.ElvaTtsManager.speak(response.userExplanation)
+                        }
+                        // If cloud planner recommends booking, trigger book_hospital skill
+                        if (response.task?.intent == "book_hospital") {
+                            triggerBookHospital(response.task.parameters)
                         }
                     },
                     onError = { error ->
@@ -403,11 +436,15 @@ class ElvaVoiceViewModel @Inject constructor(
                                 isThinking = false,
                                 healthTriageStage = "COMPLETE",
                                 isHealthConsultation = false,
-                                responseText = fallback.summaryText,
+                                responseText = fallback.userExplanation,
                             )
                         }
                         if (_uiState.value.ttsEnabled) {
-                            com.elva.laobai.ElvaTtsManager.speak(fallback.summaryText)
+                            com.elva.laobai.ElvaTtsManager.speak(fallback.userExplanation)
+                        }
+                        // If fallback response also recommends booking, trigger it
+                        if (fallback.task?.intent == "book_hospital") {
+                            triggerBookHospital(fallback.task.parameters)
                         }
                     },
                 )
@@ -433,6 +470,7 @@ class ElvaVoiceViewModel @Inject constructor(
     /**
      * Handle form filling — trigger the form fill engine.
      * Case 1: Always-on fixed form filling assistant.
+     * Executes all fill actions sequentially until every field is complete.
      */
     private fun handleFormFilling(observation: com.elva.laobai.models.ScreenObservation?) {
         val fillState = com.elva.laobai.sentinel.AlwaysOnSentinel.startFormFilling()
@@ -446,18 +484,142 @@ class ElvaVoiceViewModel @Inject constructor(
             return
         }
 
-        val firstAction = com.elva.laobai.forms.FormFillEngine.getNextAction()
+        val templateName = fillState.templateName ?: "表单"
+        val intro = "好的，老白来帮您填写${templateName}，一共${fillState.totalFields}项，您看着就行~"
         _uiState.update {
             it.copy(
                 isThinking = false,
                 isFormFilling = true,
-                formTemplateName = fillState.templateName,
-                formProgress = "${fillState.filledFields}/${fillState.totalFields} 已填写",
-                responseText = firstAction?.voicePrompt ?: "好的，老白来帮您填写${fillState.templateName}~",
+                formTemplateName = templateName,
+                formProgress = "0/${fillState.totalFields} 已填写",
+                responseText = intro,
             )
         }
-        if (_uiState.value.ttsEnabled && firstAction != null) {
-            com.elva.laobai.ElvaTtsManager.speak(firstAction.voicePrompt)
+        if (_uiState.value.ttsEnabled) {
+            com.elva.laobai.ElvaTtsManager.speak(intro)
+        }
+
+        // Begin sequential execution loop
+        executeFormActionsSequentially()
+    }
+
+    /**
+     * Sequentially execute form fill actions one by one.
+     * After each action completes, updates progress and triggers the next action.
+     */
+    private fun executeFormActionsSequentially() {
+        viewModelScope.launch {
+            var consecutiveErrors = 0
+            while (consecutiveErrors < 3) {
+                val currentState = com.elva.laobai.forms.FormFillEngine.getFillState()
+                if (currentState == null || currentState.filledFields >= currentState.totalFields) {
+                    // All fields filled
+                    val templateName = currentState?.templateName ?: "表单"
+                    val doneMsg = "${templateName}填写完成了！您检查一下看看对不对~"
+                    _uiState.update {
+                        it.copy(
+                            isFormFilling = false,
+                            formProgress = "${currentState?.filledFields ?: 0}/${currentState?.totalFields ?: 0} 已填写",
+                            responseText = doneMsg,
+                        )
+                    }
+                    if (_uiState.value.ttsEnabled) {
+                        com.elva.laobai.ElvaTtsManager.speak(doneMsg)
+                    }
+                    return@launch
+                }
+
+                val action = com.elva.laobai.forms.FormFillEngine.getNextAction()
+                if (action == null) {
+                    consecutiveErrors++
+                    kotlinx.coroutines.delay(500)
+                    continue
+                }
+
+                // Update progress UI
+                val progress = "${currentState.filledFields}/${currentState.totalFields} 已填写"
+                _uiState.update {
+                    it.copy(
+                        formProgress = progress,
+                        responseText = action.voicePrompt,
+                    )
+                }
+
+                // Execute the single fill action
+                val latch = java.util.concurrent.CountDownLatch(1)
+                var success = false
+                com.elva.laobai.executor.ActionExecutor.execute(
+                    action = action,
+                    context = context,
+                ) { result ->
+                    success = result.success
+                    latch.countDown()
+                }
+
+                // Wait for the action to complete (with timeout)
+                try {
+                    latch.await(5, java.util.concurrent.TimeUnit.SECONDS)
+                } catch (_: Exception) {
+                    // Timeout — continue to next action
+                }
+
+                if (success) {
+                    consecutiveErrors = 0
+                } else {
+                    consecutiveErrors++
+                }
+
+                // Small delay between actions for UI refresh
+                kotlinx.coroutines.delay(800)
+            }
+
+            // Too many consecutive errors — bail out
+            _uiState.update {
+                it.copy(
+                    isFormFilling = false,
+                    responseText = "填表遇到点困难，您可以手动完成剩下的部分。",
+                )
+            }
+        }
+    }
+
+    /**
+     * Trigger hospital booking after health consultation cloud planning.
+     * Uses the book_hospital skill with parameters from the cloud planner.
+     */
+    private fun triggerBookHospital(params: Map<String, String>) {
+        viewModelScope.launch {
+            kotlinx.coroutines.delay(1500) // Brief pause after speaking the recommendation
+            com.elva.laobai.executor.SkillExecutor.executeSkill(
+                skillId = "book_hospital",
+                params = params,
+                context = context,
+                onProgress = { current, total, msg ->
+                    _uiState.update {
+                        it.copy(
+                            isExecuting = true,
+                            executionStatus = "挂号中 ($current/$total): $msg",
+                        )
+                    }
+                },
+                onComplete = { result ->
+                    val msg = if (result.success) {
+                        "挂号流程完成！"
+                    } else {
+                        "挂号未成功: ${result.message}"
+                    }
+                    _uiState.update {
+                        it.copy(
+                            isExecuting = false,
+                            executionStatus = msg,
+                            responseText = msg,
+                        )
+                    }
+                    if (_uiState.value.ttsEnabled) {
+                        com.elva.laobai.ElvaTtsManager.speak(msg)
+                    }
+                },
+            )
         }
     }
 
