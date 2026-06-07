@@ -201,7 +201,7 @@ object HealthTriageEngine {
         val guessedDepartment = guessDepartment(state.symptoms)
 
         val healthSummary = HealthTriageSummary(
-            ageBand = "70s", // Would come from user profile in production
+            ageBand = computeAgeBand(),
             symptoms = state.symptoms,
             duration = state.duration,
             severity = state.severity,
@@ -513,6 +513,17 @@ object HealthTriageEngine {
      */
     private fun isPreferredHospitalAvailable(): Boolean {
         return LocalUserMemory.state.value["preferred_hospital"]?.isNotBlank() == true
+    }
+
+    /**
+     * Compute age band from LocalUserMemory for privacy-safe health data.
+     * Returns a decade band like "60s", "70s", "80s" or "unknown".
+     */
+    private fun computeAgeBand(): String {
+        val ageStr = LocalUserMemory.state.value["age"] ?: return "unknown"
+        val age = ageStr.trim().toIntOrNull() ?: return "unknown"
+        val decade = (age / 10) * 10
+        return "${decade}s"
     }
 
     /**

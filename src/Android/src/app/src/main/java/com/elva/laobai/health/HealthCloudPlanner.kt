@@ -18,18 +18,56 @@ import kotlinx.coroutines.launch
 import org.json.JSONObject
 
 /**
- * Health Cloud Planner — sends redacted health triage summaries
- * to the cloud Gemma 31B model for department recommendation
- * and booking planning (Case 2).
+ * Health Local Planner — uses on-device Gemma 4 model for health consultation
+ * planning (Case 2).
+ *
+ * NOTE: Despite the class name containing "Cloud", ALL inference runs locally
+ * on the device via ElvaInferenceBridge + Gemma 4. No data is ever sent to
+ * any cloud service. The name is retained for codebase compatibility.
  *
  * Key principles:
- * - ONLY sends strictly redacted data (age band, symptom categories, etc.)
+ * - ONLY processes strictly redacted data (age band, symptom categories, etc.)
  * - NEVER sends raw screenshots, names, ID numbers, phone numbers, verification codes
  * - Falls back to local heuristic advice if model is not ready
- * - Parses cloud response into CloudPlannerResponse for on-device action
+ * - Parses response into CloudPlannerResponse for on-device action
  */
 object HealthCloudPlanner {
     private const val TAG = "HealthCloudPlanner"
+
+    /**
+     * CloudAdapter — pluggable interface for cloud communication.
+     * Allows swapping between real HTTP, local model inference, or mock.
+     */
+    interface CloudAdapter {
+        /** Send a prompt to the cloud and get a response string. */
+        suspend fun infer(prompt: String): String?
+    }
+
+    /** On-device adapter using ElvaInferenceBridge for Gemma 4 inference. */
+    private class DefaultCloudAdapter : CloudAdapter {
+        override suspend fun infer(prompt: String): String? {
+            val bridge = ElvaInferenceBridge
+            if (!bridge.state.value.isModelReady) return null
+            var result: String? = null
+            val latch = java.util.concurrent.CountDownLatch(1)
+            bridge.infer(
+                input = prompt,
+                onPartialResult = { },
+                onDone = { responseText ->
+                    result = responseText
+                    latch.countDown()
+                },
+                onError = { _ ->
+                    latch.countDown()
+                },
+            )
+            latch.await(30, java.util.concurrent.TimeUnit.SECONDS)
+            return result
+        }
+    }
+
+    /** Current adapter instance. Can be swapped for testing. */
+    var adapter: CloudAdapter = DefaultCloudAdapter()
 
     data class PlannerState(
         val isPlanning: Boolean = false,
@@ -64,37 +102,23 @@ object HealthCloudPlanner {
 
         _state.value = PlannerState(isPlanning = true)
 
-        val bridge = ElvaInferenceBridge
-        if (!bridge.state.value.isModelReady) {
-            Log.d(TAG, "Model not ready, using local fallback")
-            _state.value = PlannerState(isPlanning = false)
-            val fallback = planLocalFallback(request)
-            onFallback(fallback)
-            return
-        }
-
         // Build the prompt for the cloud model
         val prompt = buildHealthPlannerPrompt(request)
 
         CoroutineScope(Dispatchers.Default).launch {
             try {
-                bridge.infer(
-                    input = prompt,
-                    onPartialResult = { /* Streaming not needed for planning */ },
-                    onDone = { responseText ->
-                        _state.value = PlannerState(isPlanning = false)
-                        val parsed = parseCloudResponse(responseText, request)
-                        _state.value = _state.value.copy(lastResponse = parsed)
-                        onResult(parsed)
-                    },
-                    onError = { error ->
-                        Log.e(TAG, "Cloud planner inference error: $error")
-                        _state.value = PlannerState(isPlanning = false, lastError = error)
-                        onError(error)
-                        val fallback = planLocalFallback(request)
-                        onFallback(fallback)
-                    },
-                )
+                val responseText = adapter.infer(prompt)
+                if (responseText != null) {
+                    _state.value = PlannerState(isPlanning = false)
+                    val parsed = parseCloudResponse(responseText, request)
+                    _state.value = _state.value.copy(lastResponse = parsed)
+                    onResult(parsed)
+                } else {
+                    Log.d(TAG, "Adapter returned null, using local fallback")
+                    _state.value = PlannerState(isPlanning = false)
+                    val fallback = planLocalFallback(request)
+                    onFallback(fallback)
+                }
             } catch (e: Exception) {
                 Log.e(TAG, "Cloud planner failed", e)
                 _state.value = PlannerState(isPlanning = false, lastError = e.message)
@@ -175,41 +199,41 @@ object HealthCloudPlanner {
      */
     private fun buildHealthPlannerPrompt(request: CloudPlannerRequest): String {
         val sb = StringBuilder()
-        sb.appendLine("【健康咨询请求】")
-        sb.appendLine("案例类型: ${request.caseType}")
-        sb.appendLine("用户目标: ${request.userGoal}")
+        sb.appendLine("\u3010\u5065\u5eb7\u54a8\u8be2\u8bf7\u6c42\u3011")
+        sb.appendLine("\u6848\u4f8b\u7c7b\u578b: ${request.caseType}")
+        sb.appendLine("\u7528\u6237\u76ee\u6807: ${request.userGoal}")
         sb.appendLine()
 
         request.healthSummary?.let { summary ->
-            sb.appendLine("【脱敏健康摘要】")
-            sb.appendLine("年龄段: ${summary.ageBand}")
-            sb.appendLine("症状: ${summary.symptoms.joinToString(", ")}")
-            sb.appendLine("持续时长: ${summary.duration}")
-            sb.appendLine("严重程度: ${summary.severity}")
+            sb.appendLine("\u3010\u8131\u654f\u5065\u5eb7\u6458\u8981\u3011")
+            sb.appendLine("\u5e74\u9f84\u6bb5: ${summary.ageBand}")
+            sb.appendLine("\u75c7\u72b6: ${summary.symptoms.joinToString(", ")}")
+            sb.appendLine("\u6301\u7eed\u65f6\u957f: ${summary.duration}")
+            sb.appendLine("\u4e25\u91cd\u7a0b\u5ea6: ${summary.severity}")
             if (summary.riskFlags.isNotEmpty()) {
-                sb.appendLine("风险标记: ${summary.riskFlags.joinToString(", ")}")
+                sb.appendLine("\u98ce\u9669\u6807\u8bb0: ${summary.riskFlags.joinToString(", ")}")
             }
             sb.appendLine()
         }
 
         request.localContextSummary?.let { context ->
-            sb.appendLine("【本地上下文】")
-            sb.appendLine("有首选医院: ${if (context.preferredHospitalAvailable) "是" else "否"}")
-            context.preferredDepartment?.let { sb.appendLine("首选科室: $it") }
+            sb.appendLine("\u3010\u672c\u5730\u4e0a\u4e0b\u6587\u3011")
+            sb.appendLine("\u6709\u9996\u9009\u533b\u9662: ${if (context.preferredHospitalAvailable) "\u662f" else "\u5426"}")
+            context.preferredDepartment?.let { sb.appendLine("\u9996\u9009\u79d1\u5ba4: $it") }
             sb.appendLine()
         }
 
-        sb.appendLine("可用工具: ${request.availableTools.joinToString(", ")}")
+        sb.appendLine("\u53ef\u7528\u5de5\u5177: ${request.availableTools.joinToString(", ")}")
         sb.appendLine()
 
-        sb.appendLine("""请以JSON格式回复（不要包含其他文字）：
+        sb.appendLine("""\u8bf7\u4ee5JSON\u683c\u5f0f\u56de\u590d\uff08\u4e0d\u8981\u5305\u542b\u5176\u4ed6\u6587\u5b57\uff09\uff1a
 {
-  "decision": "recommend_hospital 或 recommend_home_care 或 recommend_emergency",
-  "reason": "规划理由",
-  "recommended_department": "建议科室",
-  "risk_level": "low 或 medium 或 high",
+  "decision": "recommend_hospital \u6216 recommend_home_care \u6216 recommend_emergency",
+  "reason": "\u89c4\u5212\u7406\u7531",
+  "recommended_department": "\u5efa\u8bae\u79d1\u5ba4",
+  "risk_level": "low \u6216 medium \u6216 high",
   "requires_confirmation": true,
-  "user_explanation": "对老人说的话（亲切温和，不做诊断）"
+  "user_explanation": "\u5bf9\u8001\u4eba\u8bf4\u7684\u8bdd\uff08\u4eb2\u5207\u6e29\u548c\uff0c\u4e0d\u505a\u8bca\u65ad\uff09"
 }""")
 
         return sb.toString()
