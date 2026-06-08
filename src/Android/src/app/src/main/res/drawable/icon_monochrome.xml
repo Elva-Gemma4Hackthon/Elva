@@ -15,44 +15,23 @@
 -->
 
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:aapt="http://schemas.android.com/aapt"
     android:width="108dp"
     android:height="108dp"
     android:viewportWidth="108"
     android:viewportHeight="108">
   <path
-      android:pathData="M54,24C38.536,24 26,35.984 26,50.764C26,65.545 38.536,77.529 54,77.529C57.371,77.529 60.602,76.958 63.599,75.909C66.46,77.916 69.992,79.585 74.16,80.597C75.441,80.908 76.555,79.72 76.064,78.48C75.221,76.352 74.579,73.758 74.382,71.091C79.128,66.245 82,58.843 82,50.764C82,35.984 69.464,24 54,24Z">
-    <aapt:attr name="android:fillColor">
-      <gradient
-          android:type="linear"
-          android:startX="35"
-          android:startY="28"
-          android:endX="72"
-          android:endY="79">
-        <item android:color="#FFFDFEFF" android:offset="0" />
-        <item android:color="#FFEAF2F7" android:offset="1" />
-      </gradient>
-    </aapt:attr>
-  </path>
-
+      android:fillColor="#FF000000"
+      android:pathData="M54,24C38.536,24 26,35.984 26,50.764C26,65.545 38.536,77.529 54,77.529C57.371,77.529 60.602,76.958 63.599,75.909C66.46,77.916 69.992,79.585 74.16,80.597C75.441,80.908 76.555,79.72 76.064,78.48C75.221,76.352 74.579,73.758 74.382,71.091C79.128,66.245 82,58.843 82,50.764C82,35.984 69.464,24 54,24Z" />
   <path
       android:pathData="M40,46C44.298,42.036 50.357,40.123 56.525,40.344C62.474,40.564 67.871,43.318 71.729,47.623"
       android:fillColor="#00000000"
-      android:strokeColor="#FF5E7FA3"
-      android:strokeWidth="3"
+      android:strokeColor="#FFFFFFFF"
+      android:strokeWidth="3.2"
       android:strokeLineCap="round" />
-
   <path
       android:pathData="M42.422,55.944C45.839,52.747 50.577,51.104 55.425,51.325C60.052,51.545 64.128,53.519 67.105,56.826"
       android:fillColor="#00000000"
-      android:strokeColor="#FF7B9ABA"
-      android:strokeWidth="2.35"
-      android:strokeLineCap="round" />
-
-  <path
-      android:pathData="M71.143,33.267C74.34,35.47 76.874,38.667 78.196,42.525"
-      android:fillColor="#00000000"
-      android:strokeColor="#52FFFFFF"
-      android:strokeWidth="1.9"
+      android:strokeColor="#FFFFFFFF"
+      android:strokeWidth="2.5"
       android:strokeLineCap="round" />
 </vector>

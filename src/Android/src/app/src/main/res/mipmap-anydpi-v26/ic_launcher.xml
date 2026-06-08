@@ -26,5 +26,5 @@
     </vector>
   </background>
   <foreground android:drawable="@drawable/icon" />
-  <monochrome android:drawable="@drawable/icon" />
+  <monochrome android:drawable="@drawable/icon_monochrome" />
 </adaptive-icon>

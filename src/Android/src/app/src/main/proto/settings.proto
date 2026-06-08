@@ -51,6 +51,7 @@ message ImportedModel {
 }
 
 message LlmConfig {
+  reserved 8, 9;
   repeated string compatible_accelerators = 1;
   int32 default_max_tokens = 2;
   int32 default_topk = 3;
@@ -58,20 +59,18 @@ message LlmConfig {
   float default_temperature = 5;
   bool support_image = 6;
   bool support_audio = 7;
-  bool support_tiny_garden = 8;
-  bool support_mobile_actions = 9;
   bool support_thinking = 10;
   bool support_speculative_decoding = 11;
 }
 
 message Settings {
+  reserved 6;
   Theme theme = 1;
   AccessTokenData access_token_data = 2;  // deprecated
   repeated string text_input_history = 3;
   repeated ImportedModel imported_model = 4;
   // Has the app tos been accepted.
   bool is_tos_accepted = 5;
-  bool has_run_tiny_garden = 6;
   bool has_seen_benchmark_comparison_help = 7;
   // Has the Gemma terms of use been accepted.
   bool is_gemma_terms_accepted = 8;
