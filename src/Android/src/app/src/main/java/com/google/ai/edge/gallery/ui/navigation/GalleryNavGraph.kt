@@ -212,33 +212,63 @@ fun GalleryNavHost(
         onDispose { elvaVoiceLifecycleOwner.lifecycle.removeObserver(observer) }
       }
 
+      // Resolve downloaded models early so ensureReady can bind before init finishes.
+      val downloadedModelsForBridge =
+        remember(
+          modelManagerUiState.modelDownloadStatus,
+          modelManagerUiState.modelImportingUpdateTrigger,
+          modelManagerUiState.tasks,
+        ) {
+          modelManagerViewModel.getAllDownloadedModels()
+        }
+      androidx.compose.runtime.SideEffect {
+        val bridge = com.elva.laobai.inference.ElvaInferenceBridge
+        bridge.modelProvider = { modelManagerViewModel.getAllDownloadedModels().let(bridge::pickGemmaModel) }
+        bridge.pickGemmaModel(downloadedModelsForBridge)?.let { bridge.setTargetModel(it) }
+      }
+
       // Auto-initialize Gemma 4 model when downloaded/imported models change.
       LaunchedEffect(
         modelManagerUiState.modelDownloadStatus,
         modelManagerUiState.modelImportingUpdateTrigger,
+        modelManagerUiState.modelInitializationStatus,
         modelManagerUiState.tasks,
       ) {
         val bridge = com.elva.laobai.inference.ElvaInferenceBridge
-        if (bridge.state.value.isModelReady || bridge.state.value.isInitializing) {
+        if (bridge.state.value.isInitializing) {
           return@LaunchedEffect
         }
         val downloadedModels = modelManagerViewModel.getAllDownloadedModels()
-        val targetModel = downloadedModels.firstOrNull {
-          it.name.contains("gemma-4-e4b", ignoreCase = true)
-        } ?: downloadedModels.firstOrNull {
-          it.name.contains("gemma-4-e2b", ignoreCase = true)
-        } ?: downloadedModels.firstOrNull {
-          it.name.contains("gemma", ignoreCase = true)
+        val targetModel = bridge.pickGemmaModel(downloadedModels) ?: return@LaunchedEffect
+        bridge.setTargetModel(targetModel)
+
+        // Already serving voice chat with this model.
+        if (bridge.state.value.isModelReady && bridge.state.value.modelName == targetModel.name) {
+          return@LaunchedEffect
         }
-        if (targetModel != null) {
-          Log.d(TAG, "Auto-initializing Elva with model: ${targetModel.name}")
+
+        // Gallery Try-it may have loaded the engine — adopt without full re-init.
+        if (bridge.isModelInstanceLoaded(targetModel) && !bridge.state.value.isModelReady) {
+          Log.d(TAG, "Adopting gallery-loaded model for Elva voice: ${targetModel.name}")
           bridge.initialize(
             model = targetModel,
-            systemPrompt = com.elva.laobai.inference.ElvaFunctions.buildSystemPromptFragment(),
+            systemPrompt = com.elva.laobai.inference.ElvaFunctions.buildVoiceChatSystemPrompt(),
             context = context,
-            onReady = { Log.d(TAG, "Elva model ready: ${targetModel.name}") },
+            onReady = { Log.d(TAG, "Elva adopted model: ${targetModel.name}") },
           )
+          return@LaunchedEffect
         }
+
+        if (bridge.state.value.isModelReady) {
+          return@LaunchedEffect
+        }
+        Log.d(TAG, "Auto-initializing Elva with model: ${targetModel.name}")
+        bridge.initialize(
+          model = targetModel,
+          systemPrompt = com.elva.laobai.inference.ElvaFunctions.buildVoiceChatSystemPrompt(),
+          context = context,
+          onReady = { Log.d(TAG, "Elva model ready: ${targetModel.name}") },
+        )
       }
 
       // Observe model state for UI banner.
@@ -266,6 +296,7 @@ fun GalleryNavHost(
         isExecuting = uiState.isExecuting,
         executionStatus = uiState.executionStatus,
         onMicClick = { voiceViewModel.toggleListening() },
+        onSubmitText = { voiceViewModel.submitTextInput(it) },
         onSettingsClick = { navController.navigate(ROUTE_USER_MEMORY) },
         ttsEnabled = uiState.ttsEnabled,
         onToggleTts = { voiceViewModel.toggleTts() },

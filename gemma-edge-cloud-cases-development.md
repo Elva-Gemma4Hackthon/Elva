@@ -1,5 +1,9 @@
 # Elva Gemma 端云 Agent 两个核心 Case 开发文档
 
+> **文档同步时间：** 2026-06-08  
+> **远程仓库：** https://github.com/Elva-Gemma4Hackthon/Elva（`main` @ `51f9267`）  
+> **实现状态：** 两个核心 Case 的 V1 主体代码已落地，当前以端侧 Gemma 4 推理为主，尚未接入真实云端 Gemma 31B HTTP 服务。
+
 ## 1. 文档目标
 
 本文档用于指导 Elva LaoBai 项目的两个黑客松核心 demo case 开发：
@@ -12,8 +16,24 @@
 核心原则：
 
 - 原始屏幕、身份证、手机号、验证码、完整病历、家庭联系人等敏感信息只留在端侧。
-- 云端 Gemma 31B 只接收严格脱敏后的结构化摘要，用于复杂规划。
+- 复杂规划优先在端侧 Gemma 4 完成；若未来接入云端 Gemma 31B，也只接收严格脱敏后的结构化摘要。
 - 所有高风险动作必须经过确认，V1 不自动提交表单、不自动付款、不自动完成挂号确认。
+
+### 1.1 当前实现进度（对照远程 `main`）
+
+| 模块 | 状态 | 关键文件 |
+|------|------|----------|
+| Always-on 表单检测与 TTS 提醒 | ✅ 已实现 | `sentinel/AlwaysOnSentinel.kt` |
+| 固定模板匹配 | ✅ 已实现 | `forms/FormTemplateMatcher.kt`, `models/FormModels.kt` |
+| 表单填充引擎 | ✅ 已实现 | `forms/FormFillEngine.kt` |
+| 本地用户记忆（加密存储 + 授权 UI） | ✅ 已实现 | `memory/LocalUserMemory.kt`, `ui/UserMemorySettingsScreen.kt` |
+| 健康问诊状态机 | ✅ 已实现 | `health/HealthTriageEngine.kt` |
+| 健康规划器（可插拔适配器） | ✅ 已实现 | `health/HealthCloudPlanner.kt` |
+| 挂号自动化（提交前停止） | ✅ 已实现 | `accessibility/tasks/BookHospitalTask.kt` |
+| 语音入口与 Case UI 状态 | ✅ 已实现 | `ui/ElvaVoiceViewModel.kt`, `ui/ElvaVoiceScreen.kt` |
+| 本地模型导入 | ✅ 已实现 | `ui/modelmanager/ModelImportDialog.kt` |
+| 真实云端 Gemma 31B HTTP 服务 | ⏳ 未接入 | `HealthCloudPlanner.CloudAdapter` 可替换 |
+| 通用表单识别（非固定模板） | ⏳ V2 | — |
 
 ## 2. 当前 Elva 技术栈
 
@@ -25,7 +45,8 @@ Elva 当前主体是 Android 原生项目，基于 Google AI Edge Gallery 扩展
 - Jetpack Compose
 - Google AI Edge Gallery
 - LiteRT LLM / MediaPipe LLM Inference
-- 本地 Gemma / Qwen 模型运行能力
+- 本地 **Gemma 4（Gemma-4-E4B-it）** / Qwen 模型运行能力
+- 本地模型导入（`ModelImportDialog`）
 - Android `AccessibilityService`
 - Android `NotificationListenerService`
 - `SKILL.md` 技能系统
@@ -40,7 +61,11 @@ Elva 已有的关键模块：
 - `PrivacyFirewall`：脱敏身份证、手机号、银行卡、验证码、邮箱、地址等敏感信息。
 - `LocalSensitivityDetector`：补充检测健康、金融、地址、姓名等语义敏感信息。
 - `LocalRouter`：判断本地处理、上云规划、询问用户、停止。
-- `CloudPlanner`：云端规划适配层，目前通过 `ElvaInferenceBridge.inferWithFunctions` 获取结构化动作。
+- `CloudPlanner`：通用规划适配层，通过 `ElvaInferenceBridge` 做端侧推理。
+- `HealthCloudPlanner`：健康场景规划器，类名保留 "Cloud" 以兼容接口，**实际推理全部在端侧 Gemma 4 完成**，支持 `CloudAdapter` 插拔替换。
+- `HealthTriageEngine`：健康问诊 6 阶段状态机（症状澄清 → 风险提示 → 建议 → 挂号意愿 → 规划 → 完成）。
+- `FormTemplateMatcher` / `FormFillEngine`：固定模板识别与填充序列生成。
+- `LocalUserMemory`：加密本地记忆，`UserMemorySettingsScreen` 提供授权与编辑 UI。
 - `ElvaInferenceBridge`：连接本地模型推理与 function-style 输出解析。
 - `ElvaFunctions` / `OutputValidator`：定义可调用函数和解析 `NextAction`。
 - `SafetyGuard`：对动作做 allow / require_confirmation / deny 判断。
@@ -75,10 +100,14 @@ EdgeEvent
 
 V1 只做固定模板，不做任意表单泛化。
 
-推荐先做 1 到 2 个稳定模板：
+V1 已内置 2 个固定模板（`FormTemplates`）：
 
-- 社区活动报名表
-- 就诊前基础信息表
+| template_id | 显示名 | 自动填写字段 |
+|-------------|--------|-------------|
+| `community_event_signup` | 社区活动报名表 | 姓名、手机号、家庭住址 |
+| `pre_visit_basic_info` | 就诊前基础信息表 | 姓名、手机号、医保卡号、紧急联系人 |
+
+匹配策略：`pageType == "form"` → 关键词命中 + 字段覆盖率 → `confidence >= 0.5` 触发 TTS 提醒。
 
 固定模板的好处是 demo 稳定，字段映射可控，风险边界清楚。通用表单识别可以作为 V2。
 
@@ -100,11 +129,11 @@ Accessibility event
 
 ### 3.4 需要新增的工程概念
 
-#### LocalUserMemory
+#### LocalUserMemory（已实现）
 
-用于端侧保存用户授权过的常用信息。
+用于端侧保存用户授权过的常用信息，使用 `EncryptedSharedPreferences`（AndroidX Security Crypto）加密存储。
 
-建议字段类型：
+已实现字段（`FieldKeys`）：
 
 - `display_name`
 - `phone_masked`
@@ -116,9 +145,10 @@ Accessibility event
 
 注意：
 
-- 原始敏感值只允许端侧读取。
-- 云端请求只能看到字段类别、是否存在、脱敏摘要，不能看到原值。
-- 推荐使用 DataStore 保存结构化数据，对敏感字段使用 Android Security Crypto 加密。
+- 原始敏感值只允许端侧读取；每个字段需用户显式 `authorizeField` 后才可被助手使用。
+- 规划请求只能看到字段类别、是否存在、脱敏摘要，不能看到原值。
+- `FormFillEngine` 拒绝自动填写 `id_card` 类型字段和完整手机号。
+- 用户通过 `UserMemorySettingsScreen` 录入信息并勾选授权。
 
 #### FormTemplate
 
@@ -165,12 +195,15 @@ Always-on 不能静默执行高风险动作。
 
 老白先在端侧进行非诊断式问询，了解症状、持续时间、严重程度、是否伴随危险信号。它可以给出就医建议和注意事项，但不做医疗诊断。
 
-如果用户说想去医院，系统进入端云协同：
+如果用户说想去医院，系统进入端侧优先的协同流程：
 
-1. 端侧整理脱敏症状摘要。
-2. 云端 Gemma 31B 规划挂哪个科室、哪天去、需要准备什么。
-3. 端侧调用挂号技能，打开微信或医院小程序。
-4. 在最终确认挂号、支付、授权前停止，让用户确认。
+1. `HealthTriageEngine` 本地状态机完成症状澄清、风险提示、就医建议。
+2. 用户确认挂号后，端侧整理脱敏 `CloudPlannerRequest`。
+3. `HealthCloudPlanner` 通过端侧 Gemma 4（或本地启发式 fallback）规划科室与挂号参数。
+4. 端侧调用 `book_hospital` 技能，打开微信或医院小程序。
+5. 在最终确认挂号、支付、授权前停止，让用户确认。
+
+> **架构说明：** 当前 `LocalRouter` 将健康相关意图路由为 `LOCAL_ONLY`（`reason = health_query_local_only`），`HealthCloudPlanner` 的 `DefaultCloudAdapter` 调用 `ElvaInferenceBridge` 做端侧推理，**不向外部云服务发送数据**。未来若接入真实云端 Gemma 31B，只需实现并注入新的 `CloudAdapter`。
 
 ### 4.2 本地优先流程
 
@@ -181,7 +214,9 @@ User says "小白，我胃不舒服"
   -> local health clarification
   -> LocalSensitivityDetector detects health info
   -> PrivacyFirewall redacts
-  -> LocalRouter decides local_only or cloud_planner
+  -> LocalRouter decides local_only (health_query_local_only)
+  -> HealthTriageEngine state machine
+  -> HealthCloudPlanner (on-device Gemma 4)
 ```
 
 本地可以完成：
@@ -199,9 +234,9 @@ User says "小白，我胃不舒服"
 - 替代医生判断
 - 自动提交挂号或支付
 
-### 4.3 上云边界
+### 4.3 规划请求边界（端侧 / 未来云端通用）
 
-云端 Gemma 31B 只能接收严格脱敏后的 payload。
+无论推理在端侧还是未来云端，规划请求只能携带严格脱敏后的 payload。
 
 允许上云：
 
@@ -227,9 +262,9 @@ User says "小白，我胃不舒服"
 - 家庭联系人原始信息
 - 医保卡号
 
-### 4.4 云端规划职责
+### 4.4 规划器职责
 
-云端 Gemma 31B 只负责规划，不直接执行。
+`HealthCloudPlanner` / 未来云端 Gemma 31B 只负责规划，不直接执行。
 
 输出应该是：
 
@@ -360,9 +395,9 @@ V1 建议调整为：
 - 碰到验证码、付款、授权、提交时停止。
 - 输出必须是一个结构化 `NextAction` 或 `ask_user`。
 
-### 6.2 云端看病挂号 Prompt 重点
+### 6.2 健康规划 Prompt 重点
 
-云端 Gemma 31B 必须遵守：
+端侧 Gemma 4（及未来云端 Gemma 31B）必须遵守：
 
 - 你不是医生，不能给诊断结论。
 - 你只基于脱敏摘要做挂号规划。
@@ -372,32 +407,32 @@ V1 建议调整为：
 
 ## 7. 开发里程碑
 
-### Milestone 1：文档和固定 demo 方案
+### Milestone 1：文档和固定 demo 方案 ✅
 
-- 完成两个 case 的开发文档。
-- 固定 demo 表单和挂号 demo 路径。
-- 明确端侧、云侧、安全边界。
+- [x] 完成两个 case 的开发文档。
+- [x] 固定 demo 表单和挂号 demo 路径。
+- [x] 明确端侧、规划侧、安全边界。
 
-### Milestone 2：Always-on 表单 V1
+### Milestone 2：Always-on 表单 V1 ✅
 
-- 新增固定表单模板识别。
-- 新增本地记忆读取接口。
-- 新增表单填充 action sequence。
-- 提交前确认。
+- [x] 新增固定表单模板识别（`FormTemplateMatcher` + `FormTemplates`）。
+- [x] 新增加密本地记忆与授权 UI（`LocalUserMemory` + `UserMemorySettingsScreen`）。
+- [x] 新增表单填充 action sequence（`FormFillEngine`）。
+- [x] 提交前确认（`blockedTargets` + `ASK_CONFIRMATION`）。
 
-### Milestone 3：Trigger 看病 V1
+### Milestone 3：Trigger 看病 V1 ✅
 
-- 新增健康问询状态机。
-- 新增脱敏 `HealthTriageSummary`。
-- 接入云端 planner adapter。
-- 复用 `book_hospital` 执行挂号流程。
+- [x] 新增健康问询状态机（`HealthTriageEngine`，6 阶段）。
+- [x] 新增脱敏 `HealthTriageSummary` / `CloudPlannerRequest`。
+- [x] 接入可插拔 planner adapter（`HealthCloudPlanner`，当前为端侧 Gemma 4）。
+- [x] 复用 `book_hospital` 执行挂号流程（最终确认前停止）。
 
-### Milestone 4：演示稳定性
+### Milestone 4：演示稳定性 🔄 进行中
 
-- 固定两条 demo script。
-- 增加失败兜底。
-- 连续运行测试。
-- 准备路演解释材料。
+- [ ] 固定两条 demo script 并文档化操作步骤。
+- [x] 增加失败兜底（模型未就绪 → 本地启发式；微信/页面找不到 → 提示手动操作）。
+- [ ] 连续运行测试（每条 case 5 次）。
+- [ ] 准备路演解释材料。
 
 ## 8. 测试计划
 
@@ -436,11 +471,21 @@ V1 建议调整为：
 
 ## 9. 当前限制
 
-- 当前 Elva 已有挂号 skill 和 Accessibility 自动化基础，但真实医院小程序 UI 差异很大，V1 必须固定 demo 路径。
-- 当前云端 planner 仍需要接入真实 Gemma 31B 服务或明确 mock adapter。
-- 当前本地记忆需要补齐结构化存储与授权 UI。
+- 真实医院小程序 UI 差异很大，V1 必须固定 demo 路径（微信搜索 → 医院小程序 → 预约挂号）。
+- `HealthCloudPlanner` 当前走端侧 Gemma 4，**未接入真实云端 Gemma 31B HTTP 服务**；接口已预留 `CloudAdapter` 可替换。
+- `FormFillEngine.getMemoryValue` 目前通过 `LocalUserMemory.state` 同步读取，生产环境建议改为 suspend 协程调用。
 - OCR fallback 目前是集成点，完整 OCR 能力需要补齐。
 - 医疗场景必须定位为就医辅助和挂号辅助，不能定位为诊断或治疗。
+- 语音识别依赖系统 `SpeechRecognizer`，网络异常时可能失败（已有错误提示）。
+
+## 9.1 近期远程变更摘要（`6f9efcc` → `51f9267`）
+
+- `feat(core)`：端云健康问诊及表单填写助手主体功能。
+- `feat(ui)`：用户记忆设置、模型状态栏、快速操作、表单/健康进度展示。
+- `refactor(health)`：健康规划器重构为可插拔适配器，年龄段计算修复。
+- `refactor(router)`：健康咨询统一走本地路由标注。
+- `feat(modelmanager)`：本地模型导入，支持文件选择与进度展示。
+- `fix(skills)`：技能脚本输入校验与请求限流保护。
 
 ## 10. 推荐比赛叙事
 

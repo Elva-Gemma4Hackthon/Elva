@@ -32,7 +32,15 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Send
 import androidx.compose.material.icons.filled.VolumeUp
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -48,10 +56,14 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.scale
@@ -80,6 +92,7 @@ fun ElvaVoiceScreen(
     isExecuting: Boolean = false,
     executionStatus: String? = null,
     onMicClick: () -> Unit = {},
+    onSubmitText: (String) -> Unit = {},
     onSettingsClick: () -> Unit = {},
     ttsEnabled: Boolean = true,
     onToggleTts: () -> Unit = {},
@@ -103,6 +116,7 @@ fun ElvaVoiceScreen(
     onNavigateToModelManager: () -> Unit = {},
 ) {
     val context = LocalContext.current
+    val lifecycleOwner = LocalLifecycleOwner.current
     var audioPermissionGranted by remember {
         mutableStateOf(
             ContextCompat.checkSelfPermission(
@@ -111,13 +125,31 @@ fun ElvaVoiceScreen(
             ) == PackageManager.PERMISSION_GRANTED,
         )
     }
+    var permissionHint by remember { mutableStateOf<String?>(null) }
     val audioPermissionLauncher =
         rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
             audioPermissionGranted = granted
             if (granted) {
+                permissionHint = null
                 onMicClick()
+            } else {
+                permissionHint = "需要麦克风权限才能语音对话，请在设置里允许「麦克风」。"
             }
         }
+
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                audioPermissionGranted =
+                    ContextCompat.checkSelfPermission(
+                        context,
+                        Manifest.permission.RECORD_AUDIO,
+                    ) == PackageManager.PERMISSION_GRANTED
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
     val infiniteTransition = rememberInfiniteTransition(label = "pulse")
     val pulseScale by infiniteTransition.animateFloat(
         initialValue = 1.0f,
@@ -273,6 +305,25 @@ fun ElvaVoiceScreen(
                 ModelState.READY -> { /* No banner when model is ready */ }
             }
 
+            if (permissionHint != null) {
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 8.dp),
+                    shape = RoundedCornerShape(16.dp),
+                    colors = CardDefaults.cardColors(
+                        containerColor = Color(0xFFFFEBEE),
+                    ),
+                ) {
+                    Text(
+                        text = permissionHint!!,
+                        fontSize = 16.sp,
+                        color = Color(0xFFC62828),
+                        modifier = Modifier.padding(12.dp),
+                    )
+                }
+            }
+
             // Accessibility service warning banner (Task 12)
             if (!isAccessibilityEnabled) {
                 Card(
@@ -381,8 +432,30 @@ fun ElvaVoiceScreen(
                             )
                         }
                     }
+                    isListening -> {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(56.dp),
+                                strokeWidth = 5.dp,
+                                color = MaterialTheme.colorScheme.error,
+                            )
+                            Spacer(modifier = Modifier.height(20.dp))
+                            Text(
+                                text = "正在录音…\n说完再按一次发送",
+                                fontSize = 28.sp,
+                                fontWeight = FontWeight.Medium,
+                                color = MaterialTheme.colorScheme.error,
+                                textAlign = TextAlign.Center,
+                            )
+                        }
+                    }
                     isThinking -> {
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(56.dp),
+                                strokeWidth = 5.dp,
+                            )
+                            Spacer(modifier = Modifier.height(20.dp))
                             Text(
                                 text = "老白在想想...",
                                 fontSize = 28.sp,
@@ -390,13 +463,15 @@ fun ElvaVoiceScreen(
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 textAlign = TextAlign.Center,
                             )
-                            Spacer(modifier = Modifier.height(12.dp))
-                            Text(
-                                text = "Lao Bai is thinking...",
-                                fontSize = 20.sp,
-                                color = MaterialTheme.colorScheme.outline,
-                                textAlign = TextAlign.Center,
-                            )
+                            if (recognizedText.isNotEmpty()) {
+                                Spacer(modifier = Modifier.height(12.dp))
+                                Text(
+                                    text = "您说：「$recognizedText」",
+                                    fontSize = 20.sp,
+                                    color = MaterialTheme.colorScheme.outline,
+                                    textAlign = TextAlign.Center,
+                                )
+                            }
                         }
                     }
                     responseText.isNotEmpty() -> {
@@ -443,7 +518,7 @@ fun ElvaVoiceScreen(
                     else -> {
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
                             Text(
-                                text = "按下按钮，跟老白说话",
+                                text = "按一下录音，再按一下发送",
                                 fontSize = 28.sp,
                                 fontWeight = FontWeight.Medium,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -451,7 +526,7 @@ fun ElvaVoiceScreen(
                             )
                             Spacer(modifier = Modifier.height(8.dp))
                             Text(
-                                text = "Tap the button to talk to Lao Bai",
+                                text = "或在下方打字跟老白说话",
                                 fontSize = 20.sp,
                                 color = MaterialTheme.colorScheme.outline,
                                 textAlign = TextAlign.Center,
@@ -469,7 +544,7 @@ fun ElvaVoiceScreen(
                         modifier = Modifier
                             .size(180.dp * pulseScale)
                             .background(
-                                color = MaterialTheme.colorScheme.primary.copy(alpha = 0.15f),
+                                color = MaterialTheme.colorScheme.error.copy(alpha = 0.25f),
                                 shape = CircleShape,
                             )
                     )
@@ -502,12 +577,72 @@ fun ElvaVoiceScreen(
 
             // ===== Hint Text =====
             Text(
-                text = if (isListening) "正在听您说话..." else "按下说话",
+                text = when {
+                    isListening -> "🔴 正在录音，说完再按一次"
+                    isThinking -> "老白正在想…"
+                    else -> "按一下开始录音"
+                },
                 fontSize = 22.sp,
-                color = MaterialTheme.colorScheme.outline,
+                color = if (isListening) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.outline,
                 textAlign = TextAlign.Center,
-                modifier = Modifier.padding(vertical = 16.dp),
+                modifier = Modifier.padding(vertical = 8.dp),
             )
+
+            // ===== Text input fallback =====
+            var textInput by remember { mutableStateOf("") }
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                OutlinedTextField(
+                    value = textInput,
+                    onValueChange = { textInput = it },
+                    modifier = Modifier.weight(1f),
+                    placeholder = {
+                        Text(
+                            text = "打字跟老白说…",
+                            fontSize = 18.sp,
+                        )
+                    },
+                    textStyle = MaterialTheme.typography.bodyLarge.copy(fontSize = 20.sp),
+                    singleLine = true,
+                    enabled = !isListening && !isThinking,
+                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Send),
+                    keyboardActions = KeyboardActions(
+                        onSend = {
+                            if (textInput.isNotBlank()) {
+                                onSubmitText(textInput)
+                                textInput = ""
+                            }
+                        },
+                    ),
+                    shape = RoundedCornerShape(16.dp),
+                    colors = OutlinedTextFieldDefaults.colors(),
+                )
+                Button(
+                    onClick = {
+                        if (textInput.isNotBlank()) {
+                            onSubmitText(textInput)
+                            textInput = ""
+                        }
+                    },
+                    enabled = textInput.isNotBlank() && !isListening && !isThinking,
+                    modifier = Modifier.height(56.dp),
+                    shape = RoundedCornerShape(16.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.primary,
+                    ),
+                ) {
+                    Icon(
+                        imageVector = Icons.Filled.Send,
+                        contentDescription = "发送",
+                        modifier = Modifier.size(24.dp),
+                    )
+                }
+            }
 
             // ===== Quick Action Chips =====
             // Grid layout: 3 columns, equal-width chips for tidy alignment.

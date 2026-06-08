@@ -16,6 +16,12 @@ import com.elva.laobai.forms.FormFillEngine
 import com.elva.laobai.health.HealthTriageEngine
 import com.elva.laobai.health.HealthCloudPlanner
 import com.elva.laobai.memory.LocalUserMemory
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import kotlin.coroutines.resume
+import kotlin.coroutines.suspendCoroutine
 
 /**
  * Skill Executor - dynamic skill system that bridges Function Calling
@@ -242,47 +248,46 @@ object SkillExecutor {
             executionHistory.removeAt(0)
         }
 
-        var completedCount = 0
-        val totalActions = actions.size
+        CoroutineScope(Dispatchers.Main).launch {
+            var completedCount = 0
+            val totalActions = actions.size
 
-        for ((index, action) in actions.withIndex()) {
-            // Step 1: Validate against ToolRegistry
-            val validation = ToolRegistry.validateAction(action)
-            if (!validation.allowed) {
-                Log.w(TAG, "Skill action blocked: ${validation.reason}")
-                onComplete(SkillResult(
-                    skillId = skillId,
-                    success = false,
-                    completedActions = completedCount,
-                    totalActions = totalActions,
-                    message = "动作被安全策略阻止: ${validation.reason}",
-                    failedAction = action,
-                ))
-                return
-            }
+            for ((index, action) in actions.withIndex()) {
+                val validation = ToolRegistry.validateAction(action)
+                if (!validation.allowed) {
+                    Log.w(TAG, "Skill action blocked: ${validation.reason}")
+                    onComplete(SkillResult(
+                        skillId = skillId,
+                        success = false,
+                        completedActions = completedCount,
+                        totalActions = totalActions,
+                        message = "动作被安全策略阻止: ${validation.reason}",
+                        failedAction = action,
+                    ))
+                    return@launch
+                }
 
-            // Step 2: Check with SafetyGuard
-            val guardResult = SafetyGuard.evaluate(action, null)
-            if (guardResult.decision == com.elva.laobai.models.GuardDecision.GuardResult.DENY) {
-                Log.w(TAG, "Skill action denied by SafetyGuard: ${guardResult.reason}")
-                onComplete(SkillResult(
-                    skillId = skillId,
-                    success = false,
-                    completedActions = completedCount,
-                    totalActions = totalActions,
-                    message = "安全守卫拒绝: ${guardResult.reason}",
-                    failedAction = action,
-                ))
-                return
-            }
+                val guardResult = SafetyGuard.evaluate(action, null)
+                if (guardResult.decision == com.elva.laobai.models.GuardDecision.GuardResult.DENY) {
+                    Log.w(TAG, "Skill action denied by SafetyGuard: ${guardResult.reason}")
+                    onComplete(SkillResult(
+                        skillId = skillId,
+                        success = false,
+                        completedActions = completedCount,
+                        totalActions = totalActions,
+                        message = "安全守卫拒绝: ${guardResult.reason}",
+                        failedAction = action,
+                    ))
+                    return@launch
+                }
 
-            // Step 3: Execute via ActionExecutor
-            onProgress(index + 1, totalActions, action.voicePrompt)
+                onProgress(index + 1, totalActions, action.voicePrompt)
 
-            ActionExecutor.execute(action, context) { result ->
-                if (result.success) {
-                    completedCount++
-                } else {
+                val result = suspendCoroutine { cont ->
+                    ActionExecutor.execute(action, context) { cont.resume(it) }
+                }
+
+                if (!result.success) {
                     onComplete(SkillResult(
                         skillId = skillId,
                         success = false,
@@ -291,19 +296,20 @@ object SkillExecutor {
                         message = "动作执行失败: ${result.message}",
                         failedAction = action,
                     ))
-                    return@execute
+                    return@launch
                 }
 
-                if (completedCount == totalActions) {
-                    onComplete(SkillResult(
-                        skillId = skillId,
-                        success = true,
-                        completedActions = completedCount,
-                        totalActions = totalActions,
-                        message = "技能${skill.displayName} 执行完成",
-                    ))
-                }
+                completedCount++
+                delay(800)
             }
+
+            onComplete(SkillResult(
+                skillId = skillId,
+                success = true,
+                completedActions = completedCount,
+                totalActions = totalActions,
+                message = "技能${skill.displayName} 执行完成",
+            ))
         }
     }
 

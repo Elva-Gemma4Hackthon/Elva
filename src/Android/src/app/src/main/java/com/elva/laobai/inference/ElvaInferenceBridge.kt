@@ -41,6 +41,33 @@ object ElvaInferenceBridge {
     private var currentModel: Model? = null
     private var isInitialized = false
 
+    /** Optional resolver for downloaded models (set from UI layer). */
+    var modelProvider: (() -> Model?)? = null
+
+    /**
+     * Pick the best Gemma model from a list of downloaded models.
+     */
+    fun pickGemmaModel(models: List<Model>): Model? {
+        return models.firstOrNull { it.name.contains("gemma-4-e4b", ignoreCase = true) }
+            ?: models.firstOrNull { it.name.contains("gemma-4-e2b", ignoreCase = true) }
+            ?: models.firstOrNull { it.name.contains("gemma", ignoreCase = true) }
+            ?: models.firstOrNull { it.imported && it.name.endsWith(".litertlm", ignoreCase = true) }
+            ?: models.firstOrNull { it.isLlm }
+    }
+
+    /** Whether the gallery layer already loaded this model (e.g. Try it). */
+    fun isModelInstanceLoaded(model: Model): Boolean {
+        return model.instance is LlmModelInstance
+    }
+
+    /**
+     * Bind the target model before async initialization completes.
+     * Eliminates race where ensureReady runs before initialize sets currentModel.
+     */
+    fun setTargetModel(model: Model) {
+        currentModel = model
+    }
+
     /**
      * Initialize the Gemma 4 model for Elva voice assistant.
      * @param model The downloaded model to use.
@@ -55,13 +82,29 @@ object ElvaInferenceBridge {
         onReady: () -> Unit,
     ) {
         Log.d(TAG, "initialize: requested model=${model.name}, alreadyInitialized=$isInitialized, currentModel=${currentModel?.name}")
-        if (isInitialized && currentModel?.name == model.name) {
+        currentModel = model
+
+        // Reuse engine already loaded by Model Manager / Try it — avoid double init.
+        if (model.instance is LlmModelInstance) {
+            Log.d(TAG, "initialize: adopting existing LlmModelInstance for ${model.name}")
+            resetConversation(systemPrompt)
+            isInitialized = true
+            _state.value = InferenceState(
+                isModelReady = true,
+                modelName = model.name,
+                isInitializing = false,
+                lastError = null,
+            )
+            onReady()
+            return
+        }
+
+        if (isInitialized && currentModel?.name == model.name && _state.value.isModelReady) {
             Log.d(TAG, "initialize: reuse existing initialized model ${model.name}")
             onReady()
             return
         }
 
-        currentModel = model
         _state.value = InferenceState(
             isInitializing = true,
             modelName = model.name,
@@ -120,6 +163,9 @@ object ElvaInferenceBridge {
             return
         }
 
+        if (currentModel == null) {
+            modelProvider?.invoke()?.let { setTargetModel(it) }
+        }
         val model = currentModel
         if (model == null) {
             Log.w(TAG, "ensureReady: no current model available")
@@ -170,6 +216,48 @@ object ElvaInferenceBridge {
             } catch (e: Exception) {
                 Log.e(TAG, "Inference error", e)
                 onError(e.message ?: "推理失败")
+            }
+        }
+    }
+
+    /**
+     * Send recorded WAV audio directly to Gemma (same path as Gallery Try it).
+     */
+    fun inferWithAudio(
+        audioWav: ByteArray,
+        onPartialResult: (String) -> Unit,
+        onDone: (String) -> Unit,
+        onError: (String) -> Unit,
+    ) {
+        val model = currentModel
+        if (model == null || model.instance == null) {
+            onError("模型未就绪，请稍等")
+            return
+        }
+        if (audioWav.isEmpty()) {
+            onError("录音为空")
+            return
+        }
+
+        val instance = model.instance as LlmModelInstance
+        val conversation = instance.conversation
+        val content = listOf(com.google.ai.edge.litertlm.Content.AudioBytes(audioWav))
+        val fullResponse = StringBuilder()
+
+        CoroutineScope(Dispatchers.Default).launch {
+            try {
+                Log.d(TAG, "inferWithAudio: sending ${audioWav.size} bytes")
+                conversation
+                    .sendMessageAsync(Contents.of(content))
+                    .collect { chunk ->
+                        val text = chunk.toString()
+                        fullResponse.append(text)
+                        onPartialResult(text)
+                    }
+                onDone(fullResponse.toString())
+            } catch (e: Exception) {
+                Log.e(TAG, "Audio inference error", e)
+                onError(e.message ?: "语音理解失败")
             }
         }
     }

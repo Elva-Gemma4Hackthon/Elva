@@ -5,18 +5,17 @@
 package com.elva.laobai.ui
 
 import android.content.Context
-import android.speech.RecognitionListener
-import android.speech.RecognizerIntent
-import android.speech.SpeechRecognizer
-import android.os.Bundle
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.elva.laobai.audio.ElvaAudioRecorder
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -45,36 +44,40 @@ data class ElvaVoiceUiState(
 @HiltViewModel
 class ElvaVoiceViewModel @Inject constructor(
     @ApplicationContext private val context: Context,
-) : ViewModel(), RecognitionListener {
+) : ViewModel() {
 
     private val _uiState = MutableStateFlow(ElvaVoiceUiState())
     val uiState = _uiState.asStateFlow()
 
-    private var speechRecognizer: SpeechRecognizer? = null
-    private var recognizerIntent: android.content.Intent? = null
+    private val audioRecorder = ElvaAudioRecorder()
+    private var recordingJob: Job? = null
 
-    init {
-        try {
-            speechRecognizer = SpeechRecognizer.createSpeechRecognizer(context)
-            speechRecognizer?.setRecognitionListener(this)
-            recognizerIntent = android.content.Intent(
-                RecognizerIntent.ACTION_RECOGNIZE_SPEECH
-            ).apply {
-                putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
-                putExtra(RecognizerIntent.EXTRA_LANGUAGE, "zh-CN")
-                putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 1)
-                putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, true)
-            }
-        } catch (e: Exception) {
-            Log.e(TAG, "Failed to initialize SpeechRecognizer", e)
+    /** Pending hospital booking params awaiting user voice confirmation. */
+    private var pendingBookHospitalParams: Map<String, String>? = null
+    private var awaitingBookingConfirmation: Boolean = false
+
+    private fun showUserMessage(message: String, speak: Boolean = true) {
+        val ttsEnabled = _uiState.value.ttsEnabled
+        _uiState.update {
+            it.copy(
+                isListening = false,
+                isThinking = false,
+                responseText = message,
+            )
+        }
+        if (speak && ttsEnabled) {
+            com.elva.laobai.ElvaTtsManager.speak(message)
         }
     }
 
+    /**
+     * Mic button: first tap starts recording (red), second tap sends audio to Gemma.
+     */
     fun toggleListening() {
         if (_uiState.value.isListening) {
-            stopListening()
+            finishRecordingAndSend()
         } else {
-            startListening()
+            startRecording()
         }
     }
 
@@ -84,24 +87,26 @@ class ElvaVoiceViewModel @Inject constructor(
         com.elva.laobai.ElvaTtsManager.setEnabled(newEnabled)
     }
 
-    /**
-     * Process a quick action chip click — directly inject text
-     * into the pipeline without requiring microphone input.
-     */
-    fun processQuickAction(text: String) {
+    /** Text field / quick chips — send typed text to Gemma. */
+    fun submitTextInput(text: String) {
+        val trimmed = text.trim()
+        if (trimmed.isEmpty()) return
+        com.elva.laobai.ElvaTtsManager.stop()
         _uiState.update {
             it.copy(
-                recognizedText = text,
+                recognizedText = trimmed,
                 isThinking = true,
                 responseText = "",
+                isListening = false,
             )
         }
-        processWithGemma4(text)
+        dispatchUserText(trimmed)
     }
 
-    private fun startListening() {
-        Log.d(TAG, "startListening: begin")
-        // Stop TTS when user starts speaking
+    fun processQuickAction(text: String) = submitTextInput(text)
+
+    private fun startRecording() {
+        Log.d(TAG, "startRecording")
         com.elva.laobai.ElvaTtsManager.stop()
         _uiState.update {
             it.copy(
@@ -111,88 +116,90 @@ class ElvaVoiceViewModel @Inject constructor(
                 isThinking = false,
             )
         }
-        try {
-            speechRecognizer?.startListening(recognizerIntent)
-            Log.d(TAG, "startListening: SpeechRecognizer.startListening called")
-        } catch (e: Exception) {
-            Log.e(TAG, "Failed to start listening", e)
-            _uiState.update { it.copy(isListening = false) }
+
+        recordingJob = viewModelScope.launch {
+            val started = audioRecorder.start(viewModelScope)
+            if (!started) {
+                Log.e(TAG, "AudioRecord failed to start")
+                showUserMessage("麦克风启动失败，请检查权限，或用下方文字输入。")
+            }
         }
     }
 
-    private fun stopListening() {
-        Log.d(TAG, "stopListening: requested")
-        speechRecognizer?.stopListening()
-        _uiState.update { it.copy(isListening = false) }
-    }
-
-    // ===== RecognitionListener callbacks =====
-
-    override fun onReadyForSpeech(params: Bundle?) {
-        Log.d(TAG, "onReadyForSpeech")
-    }
-    override fun onBeginningOfSpeech() {
-        Log.d(TAG, "onBeginningOfSpeech")
-    }
-    override fun onRmsChanged(rmsdB: Float) {}
-    override fun onBufferReceived(buffer: ByteArray?) {}
-    override fun onEndOfSpeech() {
-        Log.d(TAG, "onEndOfSpeech")
-        _uiState.update { it.copy(isListening = false) }
-    }
-
-    override fun onError(error: Int) {
-        Log.w(TAG, "Speech recognition error: $error")
+    private fun finishRecordingAndSend() {
+        Log.d(TAG, "finishRecordingAndSend")
         _uiState.update {
             it.copy(
                 isListening = false,
-                isThinking = false,
-                responseText = when (error) {
-                    SpeechRecognizer.ERROR_NO_MATCH -> "没听清，再说一遍好吗？"
-                    SpeechRecognizer.ERROR_SPEECH_TIMEOUT -> "没听到声音，再试一次？"
-                    SpeechRecognizer.ERROR_INSUFFICIENT_PERMISSIONS -> "请先允许麦克风权限，再试一次。"
-                    SpeechRecognizer.ERROR_NETWORK,
-                    SpeechRecognizer.ERROR_NETWORK_TIMEOUT -> "语音识别网络异常，请检查网络后重试。"
-                    else -> "出了点小问题，再试一次吧"
-                },
+                isThinking = true,
+                recognizedText = "（语音消息）",
+                responseText = "",
             )
+        }
+
+        viewModelScope.launch {
+            recordingJob?.join()
+            recordingJob = null
+            val wav = audioRecorder.stopToWav()
+            if (wav.isEmpty()) {
+                showUserMessage("录音太短了，请按住多说几句，或直接打字。")
+                return@launch
+            }
+            sendAudioToGemma(wav)
         }
     }
 
-    override fun onResults(results: Bundle?) {
-        val matches = results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
-        val text = matches?.firstOrNull()?.trim().orEmpty()
-        Log.d(TAG, "onResults: recognized='$text'")
-        if (text.isEmpty()) {
-            _uiState.update {
-                it.copy(
-                    isListening = false,
-                    isThinking = false,
-                    recognizedText = "",
-                    responseText = "没听清，再说一遍好吗？",
-                )
-            }
+    private fun sendAudioToGemma(audioWav: ByteArray) {
+        val bridge = com.elva.laobai.inference.ElvaInferenceBridge
+        val systemPrompt = com.elva.laobai.inference.ElvaFunctions.buildVoiceChatSystemPrompt()
+
+        val doInfer = {
+            bridge.inferWithAudio(
+                audioWav = audioWav,
+                onPartialResult = { chunk ->
+                    _uiState.update {
+                        it.copy(
+                            responseText = it.responseText + chunk,
+                            isThinking = false,
+                        )
+                    }
+                },
+                onDone = { full ->
+                    val reply = full.trim().ifBlank { "大爷，我没听清楚，您再说一遍或用打字？" }
+                    _uiState.update { it.copy(isThinking = false, responseText = reply) }
+                    if (_uiState.value.ttsEnabled) {
+                        com.elva.laobai.ElvaTtsManager.speak(reply)
+                    }
+                },
+                onError = { error ->
+                    Log.e(TAG, "sendAudioToGemma error: $error")
+                    showUserMessage("语音理解失败：$error。您可以改用下方文字输入。")
+                },
+            )
+        }
+
+        if (bridge.state.value.isModelReady) {
+            doInfer()
             return
         }
 
-        _uiState.update { it.copy(isListening = false, recognizedText = text, isThinking = true) }
+        bridge.ensureReady(
+            systemPrompt = systemPrompt,
+            context = context,
+            onReady = doInfer,
+            onUnavailable = { message ->
+                showUserMessage("$message 您也可以先用文字跟老白说话。")
+            },
+        )
+    }
 
-        // If in health consultation mode, route to health handler (Case 2)
+    private fun dispatchUserText(text: String) {
         if (_uiState.value.isHealthConsultation) {
             handleHealthResponse(text)
         } else {
             processWithGemma4(text)
         }
     }
-
-    override fun onPartialResults(partialResults: Bundle?) {
-        val matches = partialResults?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
-        val text = matches?.firstOrNull() ?: ""
-        _uiState.update { it.copy(recognizedText = text) }
-    }
-
-    override fun onEvent(eventType: Int, params: Bundle?) {}
-
     /**
      * Process user input through the full Elva pipeline:
      * 1. ScamGuard check (highest priority)
@@ -249,8 +256,24 @@ class ElvaVoiceViewModel @Inject constructor(
 
         // Step 4.5: Health consultation handling (Case 2)
         // Must be checked BEFORE LOCAL_ONLY because health queries often route as LOCAL_ONLY
-        if (routing?.reason?.startsWith("health_query") == true ||
-            isHealthRelatedText(userText)) {
+        if (routing?.reason?.startsWith("health_query") == true) {
+            // triggerFullPipeline already started HealthTriageEngine — reuse its first action
+            val stageState = com.elva.laobai.health.HealthTriageEngine.getState()
+            _uiState.update {
+                it.copy(
+                    isThinking = false,
+                    isHealthConsultation = true,
+                    healthTriageStage = stageState.stage.name,
+                    healthTriageQuestion = pipelineResult.nextAction.voicePrompt,
+                    responseText = pipelineResult.nextAction.voicePrompt,
+                )
+            }
+            if (_uiState.value.ttsEnabled) {
+                com.elva.laobai.ElvaTtsManager.speak(pipelineResult.nextAction.voicePrompt)
+            }
+            return
+        }
+        if (isHealthRelatedText(userText)) {
             handleHealthConsultation(userText)
             return
         }
@@ -262,30 +285,84 @@ class ElvaVoiceViewModel @Inject constructor(
             return
         }
 
-        // Step 4.7: LOCAL_ONLY route — execute or speak locally
-        if (routing?.route == com.elva.laobai.models.RoutingDecision.Route.LOCAL_ONLY) {
-            val action = pipelineResult.nextAction
-            if (pipelineResult.guardDecision.decision == com.elva.laobai.models.GuardDecision.GuardResult.ALLOW &&
-                action.action != com.elva.laobai.models.NextAction.ActionType.SPEAK_ONLY) {
-                executeAction(action)
-                return
-            }
-            localFallbackResponse(userText)
+        // Step 4.7: Structured device actions (bills, etc.) — planner + executor
+        if (isStructuredActionIntent(userText)) {
+            runPlannerAction(userText, pipelineResult.observation)
             return
         }
 
-        // Step 5: Cloud route - try Gemma 4 via CloudPlanner
-        val runGemma4 = {
-            Log.d(TAG, "processWithGemma4: invoking CloudPlanner.plan")
+        // Step 5: Default — home voice chat via on-device Gemma (ASR text → LLM → TTS)
+        runVoiceChat(userText)
+    }
+
+    /**
+     * Primary home-screen path: ASR text → on-device Gemma conversation → TTS.
+     */
+    private fun runVoiceChat(userText: String) {
+        val bridge = com.elva.laobai.inference.ElvaInferenceBridge
+        val systemPrompt = com.elva.laobai.inference.ElvaFunctions.buildVoiceChatSystemPrompt()
+
+        val doInfer = {
+            Log.d(TAG, "runVoiceChat: inferring for '$userText'")
+            val responseBuilder = StringBuilder()
+            bridge.infer(
+                input = userText,
+                onPartialResult = { chunk ->
+                    responseBuilder.append(chunk)
+                    _uiState.update {
+                        it.copy(responseText = responseBuilder.toString(), isThinking = false)
+                    }
+                },
+                onDone = { full ->
+                    val reply = full.trim().ifBlank { "大爷，我没想好怎么说，您再说一遍好吗？" }
+                    Log.d(TAG, "runVoiceChat: done, length=${reply.length}")
+                    _uiState.update { it.copy(isThinking = false, responseText = reply) }
+                    if (_uiState.value.ttsEnabled) {
+                        com.elva.laobai.ElvaTtsManager.speak(reply)
+                    }
+                },
+                onError = { error ->
+                    Log.e(TAG, "runVoiceChat error: $error")
+                    localFallbackResponse(userText)
+                },
+            )
+        }
+
+        if (bridge.state.value.isModelReady) {
+            doInfer()
+            return
+        }
+
+        Log.d(TAG, "runVoiceChat: model not ready, calling ensureReady")
+        bridge.ensureReady(
+            systemPrompt = systemPrompt,
+            context = context,
+            onReady = { doInfer() },
+            onUnavailable = { message ->
+                Log.w(TAG, "runVoiceChat: ensureReady unavailable: $message")
+                showUserMessage(message)
+            },
+        )
+    }
+
+    /** Device automation intents that need structured planning, not free chat. */
+    private fun isStructuredActionIntent(text: String): Boolean {
+        return text.contains("交电费") || text.contains("交水费") ||
+            (text.contains("打开") && (text.contains("相册") || text.contains("相机") || text.contains("照相")))
+    }
+
+    private fun runPlannerAction(
+        userText: String,
+        observation: com.elva.laobai.models.ScreenObservation?,
+    ) {
+        val bridge = com.elva.laobai.inference.ElvaInferenceBridge
+        val runPlanner = {
             com.elva.laobai.router.CloudPlanner.plan(
-                observation = pipelineResult.observation,
+                observation = observation,
                 userText = userText,
                 callback = object : com.elva.laobai.router.CloudPlanner.PlannerCallback {
                     override fun onAction(action: com.elva.laobai.models.NextAction) {
-                        _uiState.update { it.copy(isThinking = false, responseText = action.voicePrompt) }
-                        if (_uiState.value.ttsEnabled) {
-                            com.elva.laobai.ElvaTtsManager.speak(action.voicePrompt)
-                        }
+                        handlePlannerAction(action, observation)
                     }
                     override fun onFallback(text: String) {
                         _uiState.update { it.copy(isThinking = false, responseText = text) }
@@ -295,34 +372,27 @@ class ElvaVoiceViewModel @Inject constructor(
                     }
                     override fun onError(error: String) {
                         Log.e(TAG, "CloudPlanner error: $error")
-                        localFallbackResponse(userText)
+                        runVoiceChat(userText)
                     }
                 },
             )
         }
 
         if (!bridge.state.value.isModelReady) {
-            Log.d(TAG, "processWithGemma4: model not ready, calling ensureReady")
             bridge.ensureReady(
                 systemPrompt = com.elva.laobai.inference.ElvaFunctions.buildSystemPromptFragment(),
                 context = context,
-                onReady = {
-                    Log.d(TAG, "processWithGemma4: ensureReady succeeded")
-                    runGemma4()
-                },
+                onReady = runPlanner,
                 onUnavailable = { message ->
-                    Log.w(TAG, "processWithGemma4: ensureReady unavailable: $message")
                     _uiState.update { it.copy(isThinking = false, responseText = message) }
                     if (_uiState.value.ttsEnabled) {
                         com.elva.laobai.ElvaTtsManager.speak(message)
                     }
                 },
             )
-            return
+        } else {
+            runPlanner()
         }
-
-        Log.d(TAG, "processWithGemma4: model already ready")
-        runGemma4()
     }
 
     /**
@@ -440,6 +510,11 @@ class ElvaVoiceViewModel @Inject constructor(
      * Call this from onResults() when isHealthConsultation is true.
      */
     fun handleHealthResponse(userText: String) {
+        if (awaitingBookingConfirmation) {
+            handleBookingConfirmationResponse(userText)
+            return
+        }
+
         if (!_uiState.value.isHealthConsultation) {
             processWithGemma4(userText)
             return
@@ -452,51 +527,32 @@ class ElvaVoiceViewModel @Inject constructor(
             val stageState = com.elva.laobai.health.HealthTriageEngine.getState()
             val isComplete = stageState.stage == com.elva.laobai.health.HealthTriageEngine.Stage.COMPLETE
 
-            // If stage is CLOUD_PLANNING, trigger cloud planner
+            // If stage is CLOUD_PLANNING, speak transition prompt then run planner
             if (stageState.stage == com.elva.laobai.health.HealthTriageEngine.Stage.CLOUD_PLANNING) {
+                _uiState.update {
+                    it.copy(
+                        isThinking = true,
+                        healthTriageStage = stageState.stage.name,
+                        healthTriageQuestion = nextAction.voicePrompt,
+                        responseText = nextAction.voicePrompt,
+                    )
+                }
+                if (_uiState.value.ttsEnabled) {
+                    com.elva.laobai.ElvaTtsManager.speak(nextAction.voicePrompt)
+                }
+                delay(1500)
+
                 val cloudRequest = com.elva.laobai.health.HealthTriageEngine.buildCloudRequest()
                 com.elva.laobai.health.HealthCloudPlanner.plan(
                     request = cloudRequest,
-                    onResult = { response ->
-                        _uiState.update {
-                            it.copy(
-                                isThinking = false,
-                                healthTriageStage = "COMPLETE",
-                                isHealthConsultation = false,
-                                responseText = response.userExplanation,
-                            )
-                        }
-                        if (_uiState.value.ttsEnabled) {
-                            com.elva.laobai.ElvaTtsManager.speak(response.userExplanation)
-                        }
-                        // If cloud planner recommends booking, trigger book_hospital skill
-                        if (response.task?.intent == "book_hospital") {
-                            triggerBookHospital(response.task.parameters)
-                        }
-                    },
+                    onResult = { response -> handleHealthPlannerResponse(response) },
                     onError = { error ->
                         Log.e(TAG, "Cloud planner error: $error")
                         _uiState.update {
-                            it.copy(isThinking = false, responseText = "抱歉，云端规划失败了，建议您直接联系医院挂号。")
+                            it.copy(isThinking = false, responseText = "抱歉，规划失败了，建议您直接联系医院挂号。")
                         }
                     },
-                    onFallback = { fallback ->
-                        _uiState.update {
-                            it.copy(
-                                isThinking = false,
-                                healthTriageStage = "COMPLETE",
-                                isHealthConsultation = false,
-                                responseText = fallback.userExplanation,
-                            )
-                        }
-                        if (_uiState.value.ttsEnabled) {
-                            com.elva.laobai.ElvaTtsManager.speak(fallback.userExplanation)
-                        }
-                        // If fallback response also recommends booking, trigger it
-                        if (fallback.task?.intent == "book_hospital") {
-                            triggerBookHospital(fallback.task.parameters)
-                        }
-                    },
+                    onFallback = { fallback -> handleHealthPlannerResponse(fallback) },
                 )
                 return@launch
             }
@@ -561,32 +617,20 @@ class ElvaVoiceViewModel @Inject constructor(
         viewModelScope.launch {
             var consecutiveErrors = 0
             while (consecutiveErrors < 3) {
-                val currentState = com.elva.laobai.forms.FormFillEngine.getFillState()
-                if (currentState == null || currentState.filledFields >= currentState.totalFields) {
-                    // All fields filled
-                    val templateName = currentState?.templateName ?: "表单"
-                    val doneMsg = "${templateName}填写完成了！您检查一下看看对不对~"
+                val action = com.elva.laobai.forms.FormFillEngine.getNextAction()
+                if (action == null) {
+                    // Action queue exhausted — includes stop-before-submit prompts
+                    val currentState = com.elva.laobai.forms.FormFillEngine.getFillState()
                     _uiState.update {
                         it.copy(
                             isFormFilling = false,
-                            formProgress = "${currentState?.filledFields ?: 0}/${currentState?.totalFields ?: 0} 已填写",
-                            responseText = doneMsg,
+                            formProgress = "${currentState.filledFields}/${currentState.totalFields} 已填写",
                         )
-                    }
-                    if (_uiState.value.ttsEnabled) {
-                        com.elva.laobai.ElvaTtsManager.speak(doneMsg)
                     }
                     return@launch
                 }
 
-                val action = com.elva.laobai.forms.FormFillEngine.getNextAction()
-                if (action == null) {
-                    consecutiveErrors++
-                    kotlinx.coroutines.delay(500)
-                    continue
-                }
-
-                // Update progress UI
+                val currentState = com.elva.laobai.forms.FormFillEngine.getFillState()
                 val progress = "${currentState.filledFields}/${currentState.totalFields} 已填写"
                 _uiState.update {
                     it.copy(
@@ -634,48 +678,146 @@ class ElvaVoiceViewModel @Inject constructor(
     }
 
     /**
-     * Trigger hospital booking after health consultation cloud planning.
-     * Uses the book_hospital skill with parameters from the cloud planner.
+     * Handle cloud/local health planner response — ask before booking when required.
+     */
+    private fun handleHealthPlannerResponse(response: com.elva.laobai.models.CloudPlannerResponse) {
+        val action = com.elva.laobai.health.HealthTriageEngine.handleCloudResponse(response)
+        _uiState.update {
+            it.copy(
+                isThinking = false,
+                healthTriageStage = com.elva.laobai.health.HealthTriageEngine.getState().stage.name,
+                responseText = action.voicePrompt,
+            )
+        }
+        if (_uiState.value.ttsEnabled) {
+            com.elva.laobai.ElvaTtsManager.speak(action.voicePrompt)
+        }
+
+        if (action.action == com.elva.laobai.models.NextAction.ActionType.ASK_CONFIRMATION &&
+            response.task?.intent == "book_hospital") {
+            pendingBookHospitalParams = enrichBookingParams(response.task.parameters)
+            awaitingBookingConfirmation = true
+            _uiState.update { it.copy(isHealthConsultation = true) }
+            return
+        }
+
+        if (response.task?.intent == "book_hospital" && !response.requiresConfirmation) {
+            triggerBookHospital(enrichBookingParams(response.task.parameters))
+            _uiState.update { it.copy(isHealthConsultation = false) }
+            return
+        }
+
+        _uiState.update { it.copy(isHealthConsultation = false) }
+    }
+
+    private fun handleBookingConfirmationResponse(userText: String) {
+        _uiState.update { it.copy(isThinking = true) }
+        if (isAffirmative(userText)) {
+            awaitingBookingConfirmation = false
+            val params = pendingBookHospitalParams ?: emptyMap()
+            pendingBookHospitalParams = null
+            _uiState.update { it.copy(isThinking = false, isHealthConsultation = false) }
+            triggerBookHospital(params)
+        } else {
+            awaitingBookingConfirmation = false
+            pendingBookHospitalParams = null
+            val msg = "没关系大爷，如果感觉不舒服得厉害，随时叫老白帮您挂号！"
+            _uiState.update {
+                it.copy(isThinking = false, isHealthConsultation = false, responseText = msg)
+            }
+            if (_uiState.value.ttsEnabled) {
+                com.elva.laobai.ElvaTtsManager.speak(msg)
+            }
+        }
+    }
+
+    /**
+     * Execute a planner-produced action: speak-only or run through ActionExecutor.
+     */
+    private fun handlePlannerAction(
+        action: com.elva.laobai.models.NextAction,
+        observation: com.elva.laobai.models.ScreenObservation?,
+    ) {
+        val guardDecision = com.elva.laobai.guard.SafetyGuard.evaluate(action, observation)
+        if (guardDecision.decision == com.elva.laobai.models.GuardDecision.GuardResult.DENY) {
+            val msg = action.voicePrompt.ifBlank { guardDecision.safeAlternative ?: "老白建议您不要继续这个操作。" }
+            _uiState.update { it.copy(isThinking = false, responseText = msg) }
+            if (_uiState.value.ttsEnabled) {
+                com.elva.laobai.ElvaTtsManager.speak(msg)
+            }
+            return
+        }
+        if (guardDecision.decision == com.elva.laobai.models.GuardDecision.GuardResult.REQUIRE_CONFIRMATION ||
+            action.action == com.elva.laobai.models.NextAction.ActionType.SPEAK_ONLY ||
+            action.action == com.elva.laobai.models.NextAction.ActionType.ASK_CONFIRMATION) {
+            _uiState.update { it.copy(isThinking = false, responseText = action.voicePrompt) }
+            if (_uiState.value.ttsEnabled) {
+                com.elva.laobai.ElvaTtsManager.speak(action.voicePrompt)
+            }
+            return
+        }
+        executeAction(action)
+    }
+
+    private fun enrichBookingParams(params: Map<String, String>): Map<String, String> {
+        val enriched = params.toMutableMap()
+        if (enriched["hospital"].isNullOrBlank()) {
+            com.elva.laobai.memory.LocalUserMemory.state.value["preferred_hospital"]
+                ?.takeIf { it.isNotBlank() }
+                ?.let { enriched["hospital"] = it }
+        }
+        if (enriched["department"].isNullOrBlank()) {
+            com.elva.laobai.health.HealthTriageEngine.getState().recommendedDepartment
+                ?.let { enriched["department"] = it }
+        }
+        return enriched
+    }
+
+    private fun isAffirmative(text: String): Boolean {
+        val lowerText = text.lowercase()
+        val affirmativeWords = listOf(
+            "好", "可以", "行", "是的", "嗯", "对", "没错",
+            "要", "需要", "想", "挂", "yes", "ok", "sure",
+        )
+        return affirmativeWords.any { lowerText.contains(it) }
+    }
+
+    /**
+     * Trigger hospital booking via WeChat accessibility flow (BookHospitalTask).
      */
     private fun triggerBookHospital(params: Map<String, String>) {
         viewModelScope.launch {
-            kotlinx.coroutines.delay(1500) // Brief pause after speaking the recommendation
-            com.elva.laobai.executor.SkillExecutor.executeSkill(
-                skillId = "book_hospital",
-                params = params,
+            delay(500)
+            val taskParams = enrichBookingParams(params)
+            _uiState.update {
+                it.copy(isExecuting = true, executionStatus = "正在帮您打开挂号页面...")
+            }
+            com.elva.laobai.accessibility.A11yTaskExecutor.execute(
+                taskType = com.elva.laobai.accessibility.A11yTaskExecutor.TaskType.BOOK_HOSPITAL,
+                params = taskParams,
                 context = context,
-                onProgress = { current, total, msg ->
-                    _uiState.update {
-                        it.copy(
-                            isExecuting = true,
-                            executionStatus = "挂号中 ($current/$total): $msg",
-                        )
-                    }
-                },
-                onComplete = { result ->
-                    val msg = if (result.success) {
-                        "挂号流程完成！"
-                    } else {
-                        "挂号未成功: ${result.message}"
-                    }
-                    _uiState.update {
-                        it.copy(
-                            isExecuting = false,
-                            executionStatus = msg,
-                            responseText = msg,
-                        )
-                    }
-                    if (_uiState.value.ttsEnabled) {
-                        com.elva.laobai.ElvaTtsManager.speak(msg)
-                    }
-                },
-            )
+            ) { success, message ->
+                val msg = if (success) {
+                    "挂号页面已打开，请您仔细核对信息后自己确认挂号。"
+                } else {
+                    "挂号未成功: $message"
+                }
+                _uiState.update {
+                    it.copy(
+                        isExecuting = false,
+                        executionStatus = msg,
+                        responseText = msg,
+                    )
+                }
+                if (_uiState.value.ttsEnabled) {
+                    com.elva.laobai.ElvaTtsManager.speak(msg)
+                }
+            }
         }
     }
 
     override fun onCleared() {
         super.onCleared()
-        speechRecognizer?.destroy()
-        speechRecognizer = null
+        audioRecorder.cancel()
     }
 }

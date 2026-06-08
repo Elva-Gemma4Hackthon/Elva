@@ -101,6 +101,14 @@ object ToolRegistry {
             requiresPostCheck = false,
             description = "Speak a message via TTS",
         ))
+        register(ToolDef(
+            name = "ask_confirmation",
+            actionType = ActionType.ASK_CONFIRMATION,
+            riskLevel = RiskLevel.HIGH,
+            requiresPreCheck = false,
+            requiresPostCheck = false,
+            description = "Speak a confirmation prompt via TTS",
+        ))
     }
 
     /**
