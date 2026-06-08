@@ -519,7 +519,7 @@ fun GlobalModelManager(
 }
 
 // Helper function to get the file name from a URI
-private fun getFileName(context: Context, uri: Uri): String? {
+fun getFileName(context: Context, uri: Uri): String? {
   if (uri.scheme == "content") {
     context.contentResolver.query(uri, null, null, null, null)?.use { cursor ->
       if (cursor.moveToFirst()) {

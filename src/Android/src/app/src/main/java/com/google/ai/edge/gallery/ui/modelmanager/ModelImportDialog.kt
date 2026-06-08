@@ -89,6 +89,7 @@ import java.nio.charset.StandardCharsets
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 private const val TAG = "AGModelImportDialog"
 
@@ -413,54 +414,62 @@ private fun importModel(
   onProgress: (Float) -> Unit,
   onError: (String) -> Unit,
 ) {
-  // TODO: handle error.
   coroutineScope.launch(Dispatchers.IO) {
     // Get the last component of the uri path as the imported file name.
     val decodedUri = URLDecoder.decode(uri.toString(), StandardCharsets.UTF_8.name())
     Log.d(TAG, "importing model from $decodedUri. File name: $fileName. File size: $fileSize")
 
-    // Create <app_external_dir>/imports if not exist.
-    val importsDir = File(context.getExternalFilesDir(null), IMPORTS_DIR)
-    if (!importsDir.exists()) {
-      importsDir.mkdirs()
-    }
-
-    // Import by copying the file over.
-    val outputFile = File(context.getExternalFilesDir(null), "$IMPORTS_DIR/$fileName")
-    val outputStream = FileOutputStream(outputFile)
-    val buffer = ByteArray(DEFAULT_BUFFER_SIZE)
-    var bytesRead: Int
-    var lastSetProgressTs: Long = 0
-    var importedBytes = 0L
-    val inputStream = context.contentResolver.openInputStream(uri)
     try {
-      if (inputStream != null) {
-        while (inputStream.read(buffer).also { bytesRead = it } != -1) {
-          outputStream.write(buffer, 0, bytesRead)
-          importedBytes += bytesRead
+      val externalFilesDir =
+        context.getExternalFilesDir(null)
+          ?: error("External files directory is not available on this device.")
 
-          // Report progress every 200 ms.
-          val curTs = System.currentTimeMillis()
-          if (curTs - lastSetProgressTs > 200) {
-            Log.d(TAG, "importing progress: $importedBytes, $fileSize")
-            lastSetProgressTs = curTs
-            if (fileSize != 0L) {
-              onProgress(importedBytes.toFloat() / fileSize.toFloat())
+      // Create <app_external_dir>/imports if not exist.
+      val importsDir = File(externalFilesDir, IMPORTS_DIR)
+      if (!importsDir.exists() && !importsDir.mkdirs()) {
+        error("Failed to create import directory.")
+      }
+
+      // Import by copying the file over.
+      val outputFile = File(importsDir, fileName)
+      val buffer = ByteArray(DEFAULT_BUFFER_SIZE)
+      var lastSetProgressTs = 0L
+      var importedBytes = 0L
+      val inputStream =
+        context.contentResolver.openInputStream(uri)
+          ?: error("Failed to open selected model file.")
+
+      inputStream.use { input ->
+        FileOutputStream(outputFile).use { output ->
+          var bytesRead: Int
+          while (input.read(buffer).also { bytesRead = it } != -1) {
+            output.write(buffer, 0, bytesRead)
+            importedBytes += bytesRead
+
+            // Report progress every 200 ms.
+            val curTs = System.currentTimeMillis()
+            if (curTs - lastSetProgressTs > 200) {
+              Log.d(TAG, "importing progress: $importedBytes, $fileSize")
+              lastSetProgressTs = curTs
+              if (fileSize > 0L) {
+                withContext(Dispatchers.Main) {
+                  onProgress(importedBytes.toFloat() / fileSize.toFloat())
+                }
+              }
             }
           }
         }
       }
+
+      Log.d(TAG, "import done")
+      withContext(Dispatchers.Main) {
+        onProgress(1f)
+        onDone()
+      }
     } catch (e: Exception) {
-      e.printStackTrace()
-      onError(e.message ?: "Failed to import")
-      return@launch
-    } finally {
-      inputStream?.close()
-      outputStream.close()
+      Log.e(TAG, "Failed to import model", e)
+      withContext(Dispatchers.Main) { onError(e.message ?: "Failed to import") }
     }
-    Log.d(TAG, "import done")
-    onProgress(1f)
-    onDone()
   }
 }
 
