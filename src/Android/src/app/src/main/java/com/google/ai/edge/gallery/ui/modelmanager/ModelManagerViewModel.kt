@@ -84,6 +84,7 @@ private const val MODEL_ALLOWLIST_FILENAME = "model_allowlist.json"
 private const val MODEL_ALLOWLIST_TEST_FILENAME = "model_allowlist_test.json"
 private const val ALLOWLIST_BASE_URL =
   "https://raw.githubusercontent.com/google-ai-edge/gallery/refs/heads/main/model_allowlists"
+private const val SELECTED_MODEL_SECRET_KEY = "selected_model_name"
 
 private const val TEST_MODEL_ALLOW_LIST = ""
 
@@ -170,16 +171,9 @@ private val RESET_CONVERSATION_TURN_COUNT_CONFIG =
     valueType = ValueType.INT,
   )
 
-private val PREDEFINED_LLM_TASK_ORDER =
-  listOf(
-    BuiltInTaskId.LLM_ASK_IMAGE,
-    BuiltInTaskId.LLM_ASK_AUDIO,
-    BuiltInTaskId.LLM_CHAT,
-    BuiltInTaskId.LLM_AGENT_CHAT,
-    BuiltInTaskId.LLM_PROMPT_LAB,
-    BuiltInTaskId.LLM_TINY_GARDEN,
-    BuiltInTaskId.LLM_MOBILE_ACTIONS,
-  )
+private val PREDEFINED_LLM_TASK_ORDER = listOf(BuiltInTaskId.LLM_CHAT)
+
+private val ACTIVE_ELVA_TASK_IDS = setOf(BuiltInTaskId.LLM_CHAT)
 
 /**
  * ViewModel responsible for managing models, their download status, and initialization.
@@ -227,7 +221,7 @@ constructor(
   }
 
   fun getActiveCustomTasks(): List<CustomTask> {
-    return customTasks.toList()
+    return customTasks.filter { it.task.id in ACTIVE_ELVA_TASK_IDS }
   }
 
   fun getSelectedModel(): Model? {
@@ -283,6 +277,7 @@ constructor(
 
   fun selectModel(model: Model) {
     if (_uiState.value.selectedModel.name != model.name) {
+      dataStoreRepository.saveSecret(SELECTED_MODEL_SECRET_KEY, model.name)
       _uiState.update { it.copy(selectedModel = model) }
     }
   }
@@ -397,10 +392,32 @@ constructor(
       }
       dataStoreRepository.saveImportedModels(importedModels = importedModels)
     }
+
+    val allModels =
+      uiState.value.tasks.flatMap { it.models }.distinctBy { it.name }.filter { it.name != model.name }
+    val downloadedModels =
+      allModels.filter {
+        curModelDownloadStatus[it.name]?.status == ModelDownloadStatusType.SUCCEEDED
+      }
+    val fallbackSelectedModel =
+      downloadedModels.firstOrNull { it.name.contains("gemma-4-e4b", ignoreCase = true) }
+        ?: downloadedModels.firstOrNull { it.name.contains("gemma4-e4b", ignoreCase = true) }
+        ?: downloadedModels.firstOrNull()
+        ?: allModels.firstOrNull()
+        ?: EMPTY_MODEL
+    val selectedModel =
+      if (uiState.value.selectedModel.name == model.name) {
+        dataStoreRepository.deleteSecret(SELECTED_MODEL_SECRET_KEY)
+        fallbackSelectedModel
+      } else {
+        uiState.value.selectedModel
+      }
+
     _uiState.update {
       it.copy(
         modelDownloadStatus = curModelDownloadStatus,
         tasks = it.tasks.toList(),
+        selectedModel = selectedModel,
         modelImportingUpdateTrigger = System.currentTimeMillis(),
       )
     }
@@ -630,16 +647,7 @@ constructor(
     // Create model.
     val model = createModelFromImportedModelInfo(info = info)
 
-    val setOfTasks =
-      mutableSetOf(
-        BuiltInTaskId.LLM_CHAT,
-        BuiltInTaskId.LLM_ASK_IMAGE,
-        BuiltInTaskId.LLM_ASK_AUDIO,
-        BuiltInTaskId.LLM_PROMPT_LAB,
-        BuiltInTaskId.LLM_TINY_GARDEN,
-        BuiltInTaskId.LLM_MOBILE_ACTIONS,
-        BuiltInTaskId.LLM_AGENT_CHAT,
-      )
+    val setOfTasks = ACTIVE_ELVA_TASK_IDS.toMutableSet()
     for (task in getActiveCustomTasks().map { it.task }.filter { setOfTasks.contains(it.id) }) {
       // Remove duplicated imported model if existed.
       val modelIndex = task.models.indexOfFirst { info.fileName == it.name && it.imported }
@@ -647,24 +655,7 @@ constructor(
         Log.d(TAG, "duplicated imported model found in task. Removing it first")
         task.models.removeAt(modelIndex)
       }
-      if (
-        (task.id == BuiltInTaskId.LLM_ASK_IMAGE && model.llmSupportImage) ||
-          (task.id == BuiltInTaskId.LLM_ASK_AUDIO && model.llmSupportAudio) ||
-          (task.id == BuiltInTaskId.LLM_TINY_GARDEN && model.llmSupportTinyGarden) ||
-          (task.id == BuiltInTaskId.LLM_MOBILE_ACTIONS && model.llmSupportMobileActions) ||
-          (task.id != BuiltInTaskId.LLM_ASK_IMAGE &&
-            task.id != BuiltInTaskId.LLM_ASK_AUDIO &&
-            task.id != BuiltInTaskId.LLM_TINY_GARDEN &&
-            task.id != BuiltInTaskId.LLM_MOBILE_ACTIONS)
-      ) {
-        task.models.add(model)
-        if (task.id == BuiltInTaskId.LLM_TINY_GARDEN) {
-          val newConfigs = model.configs.toMutableList()
-          newConfigs.add(RESET_CONVERSATION_TURN_COUNT_CONFIG)
-          model.configs = newConfigs
-          model.preProcess()
-        }
-      }
+      task.models.add(model)
       task.updateTrigger.value = System.currentTimeMillis()
     }
 
@@ -1010,12 +1001,6 @@ constructor(
           for (taskType in allowedModel.taskTypes) {
             val task = curTasks.find { it.id == taskType }
             task?.models?.add(model)
-
-            if (task?.id == BuiltInTaskId.LLM_TINY_GARDEN) {
-              val newConfigs = model.configs.toMutableList()
-              newConfigs.add(RESET_CONVERSATION_TURN_COUNT_CONFIG)
-              model.configs = newConfigs
-            }
           }
         }
 
@@ -1169,26 +1154,8 @@ constructor(
       // Create model.
       val model = createModelFromImportedModelInfo(info = importedModel)
 
-      // Add to task.
+      // Add to active Elva task only.
       tasks.get(key = BuiltInTaskId.LLM_CHAT)?.models?.add(model)
-      tasks.get(key = BuiltInTaskId.LLM_PROMPT_LAB)?.models?.add(model)
-      tasks.get(key = BuiltInTaskId.LLM_AGENT_CHAT)?.models?.add(model)
-      if (model.llmSupportImage) {
-        tasks.get(key = BuiltInTaskId.LLM_ASK_IMAGE)?.models?.add(model)
-      }
-      if (model.llmSupportAudio) {
-        tasks.get(key = BuiltInTaskId.LLM_ASK_AUDIO)?.models?.add(model)
-      }
-      if (model.llmSupportTinyGarden) {
-        tasks.get(key = BuiltInTaskId.LLM_TINY_GARDEN)?.models?.add(model)
-        val newConfigs = model.configs.toMutableList()
-        newConfigs.add(RESET_CONVERSATION_TURN_COUNT_CONFIG)
-        model.configs = newConfigs
-        model.preProcess()
-      }
-      if (model.llmSupportMobileActions) {
-        tasks.get(key = BuiltInTaskId.LLM_MOBILE_ACTIONS)?.models?.add(model)
-      }
 
       // Update status.
       modelDownloadStatus[model.name] =
@@ -1202,12 +1169,39 @@ constructor(
     val textInputHistory = dataStoreRepository.readTextInputHistory()
     Log.d(TAG, "text input history: $textInputHistory")
 
+    val allTasks = getActiveCustomTasks().map { it.task }.toList()
+    val allModels = allTasks.flatMap { it.models }.distinctBy { it.name }
+    val downloadedModels =
+      allModels.filter {
+        modelDownloadStatus[it.name]?.status == ModelDownloadStatusType.SUCCEEDED
+      }
+    val storedSelectedModelName = dataStoreRepository.readSecret(SELECTED_MODEL_SECRET_KEY)
+    val preservedSelectedModel =
+      uiState.value.selectedModel.takeIf { selected ->
+        selected.name.isNotEmpty() && allModels.any { it.name == selected.name }
+      }
+    val storedSelectedModel =
+      storedSelectedModelName?.takeIf { it.isNotEmpty() }?.let { selectedModelName ->
+        downloadedModels.firstOrNull { it.name == selectedModelName }
+      }
+    if (storedSelectedModelName != null && storedSelectedModel == null) {
+      dataStoreRepository.deleteSecret(SELECTED_MODEL_SECRET_KEY)
+    }
+    val defaultSelectedModel =
+      preservedSelectedModel
+        ?: storedSelectedModel
+        ?: downloadedModels.firstOrNull { it.name.contains("gemma-4-e4b", ignoreCase = true) }
+        ?: downloadedModels.firstOrNull { it.name.contains("gemma4-e4b", ignoreCase = true) }
+        ?: downloadedModels.firstOrNull()
+        ?: allModels.firstOrNull()
+
     Log.d(TAG, "model download status: $modelDownloadStatus")
     return ModelManagerUiState(
-      tasks = getActiveCustomTasks().map { it.task }.toList(),
+      tasks = allTasks,
       tasksByCategory = mapOf(),
       modelDownloadStatus = modelDownloadStatus,
       modelInitializationStatus = modelInstances,
+      selectedModel = defaultSelectedModel ?: EMPTY_MODEL,
       textInputHistory = textInputHistory,
     )
   }
@@ -1227,8 +1221,6 @@ constructor(
     val llmMaxToken = info.llmConfig.defaultMaxTokens
     val llmSupportImage = info.llmConfig.supportImage
     val llmSupportAudio = info.llmConfig.supportAudio
-    val llmSupportTinyGarden = info.llmConfig.supportTinyGarden
-    val llmSupportMobileActions = info.llmConfig.supportMobileActions
     val llmSupportThinking = info.llmConfig.supportThinking
     val llmSupportSpeculativeDecoding = info.llmConfig.supportSpeculativeDecoding
     val configs: MutableList<Config> =
@@ -1249,8 +1241,6 @@ constructor(
       capabilityToTaskTypes[ModelCapability.LLM_THINKING] =
         listOf(
           BuiltInTaskId.LLM_CHAT,
-          BuiltInTaskId.LLM_ASK_IMAGE,
-          BuiltInTaskId.LLM_ASK_AUDIO,
         )
     }
     if (llmSupportSpeculativeDecoding) {
@@ -1258,9 +1248,6 @@ constructor(
       capabilityToTaskTypes[ModelCapability.SPECULATIVE_DECODING] =
         listOf(
           BuiltInTaskId.LLM_CHAT,
-          BuiltInTaskId.LLM_ASK_IMAGE,
-          BuiltInTaskId.LLM_ASK_AUDIO,
-          BuiltInTaskId.LLM_PROMPT_LAB,
         )
     }
     val model =
@@ -1275,8 +1262,6 @@ constructor(
         imported = true,
         llmSupportImage = llmSupportImage,
         llmSupportAudio = llmSupportAudio,
-        llmSupportTinyGarden = llmSupportTinyGarden,
-        llmSupportMobileActions = llmSupportMobileActions,
         capabilities = capabilities.toList(),
         capabilityToTaskTypes = capabilityToTaskTypes.toMap(),
         llmMaxToken = llmMaxToken,

@@ -134,8 +134,6 @@ private val IMPORT_CONFIGS_LLM: List<Config> =
     ),
     BooleanSwitchConfig(key = ConfigKeys.SUPPORT_IMAGE, defaultValue = false),
     BooleanSwitchConfig(key = ConfigKeys.SUPPORT_AUDIO, defaultValue = false),
-    BooleanSwitchConfig(key = ConfigKeys.SUPPORT_TINY_GARDEN, defaultValue = false),
-    BooleanSwitchConfig(key = ConfigKeys.SUPPORT_MOBILE_ACTIONS, defaultValue = false),
     BooleanSwitchConfig(key = ConfigKeys.SUPPORT_THINKING, defaultValue = false),
     BooleanSwitchConfig(key = ConfigKeys.SUPPORT_SPECULATIVE_DECODING, defaultValue = false),
     SegmentedButtonConfig(
@@ -262,18 +260,6 @@ fun ModelImportDialog(
                   valueType = ValueType.BOOLEAN,
                 )
                   as Boolean
-              val supportTinyGarden =
-                convertValueToTargetType(
-                  value = values.get(ConfigKeys.SUPPORT_TINY_GARDEN.label)!!,
-                  valueType = ValueType.BOOLEAN,
-                )
-                  as Boolean
-              val supportMobileActions =
-                convertValueToTargetType(
-                  value = values.get(ConfigKeys.SUPPORT_MOBILE_ACTIONS.label)!!,
-                  valueType = ValueType.BOOLEAN,
-                )
-                  as Boolean
               val supportThinking =
                 convertValueToTargetType(
                   value = values.get(ConfigKeys.SUPPORT_THINKING.label)!!,
@@ -299,9 +285,7 @@ fun ModelImportDialog(
                       .setDefaultTemperature(defaultTemperature)
                       .setSupportImage(supportImage)
                       .setSupportAudio(supportAudio)
-                      .setSupportMobileActions(supportMobileActions)
                       .setSupportThinking(supportThinking)
-                      .setSupportTinyGarden(supportTinyGarden)
                       .setSupportSpeculativeDecoding(supportSpeculativeDecoding)
                       .build()
                   )

@@ -55,8 +55,6 @@ object ConfigKeys {
   val DEFAULT_TEMPERATURE = ConfigKey("default_temperature", "Default temperature")
   val SUPPORT_IMAGE = ConfigKey("support_image", "Support image")
   val SUPPORT_AUDIO = ConfigKey("support_audio", "Support audio")
-  val SUPPORT_TINY_GARDEN = ConfigKey("support_tiny_garden", "Support tiny garden")
-  val SUPPORT_MOBILE_ACTIONS = ConfigKey("support_mobile_actions", "Support mobile actions")
   val SUPPORT_THINKING = ConfigKey("support_thinking", "Support thinking")
   val SUPPORT_SPECULATIVE_DECODING =
     ConfigKey("support_speculative_decoding", "Support speculative decoding")

@@ -20,9 +20,7 @@ import android.app.Application
 import com.elva.laobai.ElvaTtsManager
 import com.elva.laobai.memory.LocalUserMemory
 import com.google.ai.edge.gallery.data.DataStoreRepository
-import com.google.ai.edge.gallery.notifications.NotificationScheduleManager
 import com.google.ai.edge.gallery.ui.theme.ThemeSettings
-import com.google.firebase.FirebaseApp
 import dagger.hilt.android.HiltAndroidApp
 import javax.inject.Inject
 
@@ -30,7 +28,6 @@ import javax.inject.Inject
 class GalleryApplication : Application() {
 
   @Inject lateinit var dataStoreRepository: DataStoreRepository
-  @Inject lateinit var notificationScheduleManager: NotificationScheduleManager
 
   companion object {
     @Volatile
@@ -41,14 +38,9 @@ class GalleryApplication : Application() {
   override fun onCreate() {
     super.onCreate()
     appContext = applicationContext
-    // Initialize the notification schedule manager to load the scheduled notifications from the
-    // disk.
-    notificationScheduleManager.initialize()
 
     // Load saved theme.
     ThemeSettings.themeOverride.value = dataStoreRepository.readTheme()
-
-    FirebaseApp.initializeApp(this)
 
     // Elva LaoBai: Initialize TTS for voice responses.
     ElvaTtsManager.initialize(this)
