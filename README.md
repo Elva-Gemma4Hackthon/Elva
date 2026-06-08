@@ -22,7 +22,7 @@
 <p>
   <strong>Elva LaoBai（老白）</strong> 是一款运行在 Android 设备上的 <strong>完全离线、隐私优先</strong> 的语音 AI 助手，
   专为中国老年用户设计。基于 <a href="https://github.com/google-ai-edge/gallery">Google AI Edge Gallery</a> 开源项目，
-  利用 <strong>MediaPipe LLM Inference API</strong> 在设备本地运行 <strong>Gemma 4</strong> 和 <strong>Qwen</strong> 系列 AI 模型，
+  利用 <strong>MediaPipe LLM Inference API</strong> 在设备本地运行 <strong>Gemma</strong> 系列 AI 模型，
   无需联网即可完成智能对话、自动化操作等任务。
 </p>
 
@@ -149,7 +149,7 @@
   </tr>
 </table>
 
-<p>内置 <strong>16 个</strong>技能（挂号、缴费、地图、心情追踪等），支持从社区精选列表、URL 或本地加载更多。</p>
+<p>内置 <strong>20 个</strong>技能（挂号、缴费、地图、心情追踪等），支持从社区精选列表、URL 或本地加载更多。</p>
 
 <h3>🔌 MCP 集成</h3>
 
@@ -189,8 +189,8 @@
     <td>本地 LLM 推理引擎</td>
   </tr>
   <tr>
-    <td>Gemma 4 / Gemma 3n / Qwen2.5</td>
-    <td>设备端 AI 模型（int4/int8 量化）</td>
+    <td>Gemma 4 / Gemma 3n</td>
+    <td>设备端 AI 模型（LiteRT-LM / int4 量化）</td>
   </tr>
   <tr>
     <td rowspan="3"><strong>网络 &amp; 数据</strong></td>
@@ -239,7 +239,7 @@ Elva/
     ├── DEVELOPMENT.md             # 开发配置说明
     ├── Function_Calling_Guide.md  # 自定义 Function Calling 指南
     ├── Bug_Reporting_Guide.md     # Bug 报告指南
-    ├── model_allowlist.json       # 可用 AI 模型列表（9个）
+    ├── model_allowlist.json       # 可用 AI 模型列表（5个）
     │
     ├── Android/                   # <strong>Android 应用源码</strong>
     │   └── src/
@@ -252,6 +252,13 @@ Elva/
     │       │       │   ├── sentinel/         # Always On 监控
     │       │       │   ├── accessibility/    # 无障碍服务
     │       │       │   ├── inference/        # 模型推理桥接
+    │       │       │   ├── executor/         # 执行层（动作执行/技能/工具注册）
+    │       │       │   ├── health/           # 健康分诊与云端规划
+    │       │       │   ├── forms/            # 表单模板匹配与自动填充
+    │       │       │   ├── memory/           # 本地用户记忆
+    │       │       │   ├── contacts/         # 联系人解析
+    │       │       │   ├── observer/         # 屏幕观察
+    │       │       │   ├── model/            # 模型任务模块
     │       │       │   ├── ui/               # 语音 UI 界面
     │       │       │   └── models/           # 五层数据模型
     │       │       └── com/google/ai/edge/gallery/  # Google 基础代码
@@ -259,7 +266,7 @@ Elva/
     │       └── build.gradle.kts              # 根构建配置
     │
     ├── skills/                    # <strong>Agent Skills 系统</strong>
-    │   ├── built-in/              # 16 个内置技能
+    │   ├── built-in/              # 16 个内置技能（APK 内置 20 个）
     │   └── featured/              # 3 个精选社区技能
     │
     ├── mcp/                       # <strong>MCP 协议集成</strong>
@@ -301,7 +308,7 @@ cd Elva</code></pre>
   </li>
   <li>
     <p><strong>构建 APK</strong></p>
-    <pre><code>cd src\Android\src
+    <pre><code>cd src/Android/src
 gradlew assembleRelease</code></pre>
   </li>
   <li>
@@ -331,53 +338,32 @@ gradlew assembleRelease</code></pre>
     <th>支持能力</th>
   </tr>
   <tr>
-    <td><strong>Gemma-4-E2B-it</strong> 🆕</td>
-    <td>~2.4 GB</td>
-    <td>≥ 8 GB</td>
-    <td>int4</td>
-    <td>对话 · 图像理解 · 音频理解 · 思维链 · 32K 上下文</td>
-  </tr>
-  <tr>
     <td><strong>Gemma-4-E4B-it</strong> 🆕</td>
     <td>~3.4 GB</td>
     <td>≥ 12 GB</td>
-    <td>int4</td>
+    <td>LiteRT-LM</td>
     <td>对话 · 图像理解 · 音频理解 · 思维链 · 32K 上下文</td>
   </tr>
   <tr>
     <td><strong>Gemma-3n-E2B-it</strong></td>
-    <td>~3.4 GB</td>
-    <td>≥ 8 GB</td>
+    <td>~2.9 GB</td>
+    <td>≥ 6 GB</td>
     <td>int4</td>
-    <td>对话 · 图像理解 · 音频理解 · 4K 上下文</td>
+    <td>对话 · 图像理解 · 4K 上下文</td>
   </tr>
   <tr>
     <td><strong>Gemma-3n-E4B-it</strong></td>
-    <td>~4.6 GB</td>
-    <td>≥ 12 GB</td>
+    <td>~4.1 GB</td>
+    <td>≥ 8 GB</td>
     <td>int4</td>
-    <td>对话 · 图像理解 · 音频理解 · 4K 上下文</td>
+    <td>对话 · 图像理解 · 4K 上下文</td>
   </tr>
   <tr>
     <td><strong>Gemma3-1B-IT</strong></td>
     <td>~557 MB</td>
-    <td>≥ 6 GB</td>
+    <td>≥ 2 GB</td>
     <td>int4</td>
     <td>对话 · 提示实验</td>
-  </tr>
-  <tr>
-    <td><strong>Qwen2.5-1.5B-Instruct</strong></td>
-    <td>~1.5 GB</td>
-    <td>≥ 6 GB</td>
-    <td>q8</td>
-    <td>对话 · 提示实验</td>
-  </tr>
-  <tr>
-    <td><strong>DeepSeek-R1-Distill-Qwen-1.5B</strong> 🆕</td>
-    <td>~1.75 GB</td>
-    <td>≥ 6 GB</td>
-    <td>q8</td>
-    <td>对话 · 提示实验 · 推理链</td>
   </tr>
 </table>
 
