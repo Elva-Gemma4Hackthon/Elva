@@ -30,6 +30,9 @@ limitations under the License.
         try {
           const jsonData = JSON.parse(data);
           const location = jsonData.location;
+          if (!location || typeof location !== 'string' || location.trim() === '') {
+            return JSON.stringify({error: 'Missing or empty required field: "location".'});
+          }
           const encodedLocation = encodeURIComponent(location);
           return JSON.stringify({
             webview: {

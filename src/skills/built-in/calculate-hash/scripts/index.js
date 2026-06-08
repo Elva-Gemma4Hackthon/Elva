@@ -27,6 +27,12 @@ async function digestMessage(message) {
 window['ai_edge_gallery_get_result'] = async (data) => {
   try {
     const jsonData = JSON.parse(data);
+    if (jsonData === null || typeof jsonData !== 'object') {
+      return JSON.stringify({error: 'Invalid input: expected a JSON object with a "text" field.'});
+    }
+    if (jsonData['text'] === undefined || jsonData['text'] === null) {
+      return JSON.stringify({error: 'Missing required field: "text".'});
+    }
     return JSON.stringify(await digestMessage(jsonData['text']));
   } catch (e) {
     console.error(e);

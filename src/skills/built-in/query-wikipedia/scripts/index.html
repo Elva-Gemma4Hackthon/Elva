@@ -21,6 +21,33 @@ limitations under the License.
   </head>
   <body>
     <script>
+      // Rate-limit guard: enforce minimum 1 second between API calls
+      let _lastFetchTime = 0;
+      const MIN_FETCH_INTERVAL_MS = 1000;
+
+      async function rateLimitedFetch(url) {
+        const now = Date.now();
+        const elapsed = now - _lastFetchTime;
+        if (elapsed < MIN_FETCH_INTERVAL_MS) {
+          await new Promise(r => setTimeout(r, MIN_FETCH_INTERVAL_MS - elapsed));
+        }
+        _lastFetchTime = Date.now();
+        return fetch(url);
+      }
+
+      // Retry with exponential backoff for 429 (rate limit) errors
+      async function fetchWithRetry(url, maxRetries = 2) {
+        for (let attempt = 0; attempt <= maxRetries; attempt++) {
+          const res = await rateLimitedFetch(url);
+          if (res.status === 429 && attempt < maxRetries) {
+            const delay = 1000 * Math.pow(2, attempt);
+            await new Promise(r => setTimeout(r, delay));
+            continue;
+          }
+          return res;
+        }
+      }
+
       /**
        * Performs a fuzzy search to get the intro, then fetches Section 0 HTML to parse the infobox.
        * @param {string} topic - The search keywords.
@@ -40,7 +67,7 @@ limitations under the License.
           exintro: "1",
           origin: "*",
         });
-        const searchRes = await fetch(`${baseUrl}?${searchParams.toString()}`);
+        const searchRes = await fetchWithRetry(`${baseUrl}?${searchParams.toString()}`);
         if (!searchRes.ok) throw new Error(`HTTP error! status: ${searchRes.status}`);
         const searchData = await searchRes.json();
         if (!searchData.query || !searchData.query.pages) {
@@ -64,7 +91,7 @@ limitations under the License.
             format: "json",
             origin: "*",
           });
-          const parseRes = await fetch(`${baseUrl}?${parseParams.toString()}`);
+          const parseRes = await fetchWithRetry(`${baseUrl}?${parseParams.toString()}`);
           const parseData = await parseRes.json();
           const html = parseData?.parse?.text["*"];
           if (html) {
