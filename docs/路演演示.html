@@ -1,0 +1,1136 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Elva 老白 —— 老人AI声导伴侣 | 黑客松路演</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome 图标 -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Noto+Sans+SC:wght@300;400;500;700;900&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'Noto Sans SC', 'sans-serif'],
+                    },
+                    colors: {
+                        brand: {
+                            bg: '#070A13',
+                            card: '#111726',
+                            accent: '#10B981', // 极光绿 - 代表安全与通行
+                            highlight: '#F59E0B', // 曜石金 - 代表阻断与警示
+                            purple: '#8B5CF6', // 智慧紫 - 代表大模型与规划
+                            rose: '#F43F5E', // 温暖红 - 代表家人与陪伴
+                            textMuted: '#6B7280',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        /* 幻灯片过渡动画 */
+        .slide {
+            display: none;
+            opacity: 0;
+            transition: opacity 0.3s ease-in-out;
+        }
+        .slide.active {
+            display: flex;
+            opacity: 1;
+        }
+        /* 仿毛玻璃效果 */
+        .glass {
+            background: rgba(17, 23, 38, 0.75);
+            backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.06);
+        }
+        .device-shadow {
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.7);
+        }
+    </style>
+</head>
+<body class="bg-brand-bg text-slate-100 font-sans overflow-hidden min-h-screen flex flex-col justify-between">
+
+    <!-- 顶部导航栏 -->
+    <header class="w-full px-8 py-4 flex justify-between items-center border-b border-white/5 z-50 glass">
+        <div class="flex items-center space-x-3">
+            <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-brand-accent via-emerald-500 to-brand-purple flex items-center justify-center shadow-lg shadow-brand-accent/20">
+                <i class="fa-solid fa-ear-listen text-lg text-white"></i>
+            </div>
+            <div>
+                <span class="font-extrabold text-xl tracking-wider bg-clip-text text-transparent bg-gradient-to-r from-brand-accent via-emerald-400 to-brand-purple">Elva 老白</span>
+                <span class="text-xs text-brand-accent ml-2 border border-brand-accent/30 px-1.5 py-0.5 rounded uppercase font-semibold">老人AI声导伴侣</span>
+            </div>
+        </div>
+        <div class="flex items-center space-x-6 text-sm text-slate-400">
+            <span class="hover:text-white transition-colors duration-200">端云结合安全陪伴式 GUI Agent</span>
+            <div class="h-4 w-px bg-white/10"></div>
+            <span id="slide-index" class="font-mono text-brand-accent font-bold">1 / 11</span>
+        </div>
+    </header>
+
+    <!-- 幻灯片内容区域 -->
+    <main class="flex-grow flex items-center justify-center p-6 relative w-full overflow-hidden">
+        
+        <!-- 背景模糊发光体 -->
+        <div class="absolute w-[500px] h-[500px] rounded-full bg-brand-accent/5 blur-[120px] -top-20 -left-20 pointer-events-none"></div>
+        <div class="absolute w-[600px] h-[600px] rounded-full bg-brand-purple/5 blur-[150px] -bottom-40 -right-20 pointer-events-none"></div>
+
+        <!-- Slide 1: 封面 -->
+        <section id="slide-1" class="slide active w-full max-w-6xl flex-col justify-center items-center text-center space-y-8">
+            <div class="inline-flex items-center space-x-2 px-4 py-1.5 rounded-full bg-brand-accent/10 border border-brand-accent/20 text-brand-accent text-sm font-semibold tracking-wide">
+                <i class="fa-solid fa-sparkles"></i>
+                <span>Gemma 开发者大赛参赛项目</span>
+            </div>
+            <div class="space-y-4">
+                <h1 class="text-6xl md:text-8xl font-black tracking-tight leading-none">
+                    Elva <span class="bg-clip-text text-transparent bg-gradient-to-r from-brand-accent via-emerald-400 to-brand-purple">老白</span>
+                </h1>
+                <p class="text-2xl md:text-4xl text-slate-200 font-light tracking-wide">
+                    老人 AI 声导伴侣
+                </p>
+            </div>
+            <p class="text-lg md:text-xl text-slate-400 max-w-3xl mx-auto leading-relaxed">
+                面向老年、视障及低数字技能人群的“端云协同、安全可控、无感脱敏”<br>
+                陪伴式语音导航与风险防范 GUI Agent
+            </p>
+            <div class="w-24 h-1 bg-gradient-to-r from-brand-accent to-brand-purple rounded-full mx-auto"></div>
+            <div class="flex justify-center space-x-12 text-left pt-6 max-w-3xl glass rounded-2xl p-6">
+                <div>
+                    <span class="text-xs text-brand-accent uppercase block font-bold tracking-wider mb-1">设计愿景</span>
+                    <span class="text-sm text-slate-300 font-medium">声控自然交互 / 拒绝界面恐惧 / 杜绝欺诈越权</span>
+                </div>
+                <div class="w-px bg-white/10"></div>
+                <div>
+                    <span class="text-xs text-brand-purple uppercase block font-bold tracking-wider mb-1">端云边界</span>
+                    <span class="text-sm text-slate-300 font-medium">原始截图不出端 / 敏感字段全脱敏 / 云端仅作策略规划</span>
+                </div>
+            </div>
+        </section>
+
+        <!-- Slide 2: 痛点分析 -->
+        <section id="slide-2" class="slide w-full max-w-6xl flex-col justify-between space-y-6">
+            <div>
+                <h2 class="text-4xl font-extrabold tracking-tight">老人的数字边缘困局：看不懂、不敢点、怕被骗</h2>
+                <p class="text-slate-400 mt-1">智能设备普及了，却把银发族推向了更孤立的鸿沟</p>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div class="glass p-8 rounded-2xl border-l-4 border-red-500/50 flex flex-col justify-between h-[360px]">
+                    <div>
+                        <div class="w-12 h-12 rounded-xl bg-red-500/10 flex items-center justify-center text-red-400 text-xl mb-6">
+                            <i class="fa-solid fa-eye-slash"></i>
+                        </div>
+                        <h3 class="text-xl font-bold text-slate-100">认知壁垒：复杂的GUI界面</h3>
+                        <p class="text-slate-400 text-sm mt-3 leading-relaxed">
+                            五花八门的业务表单、隐蔽的设置开关、满屏的文字。老年用户常常面临“不知道在哪、不知道怎么点”的界面恐惧。
+                        </p>
+                    </div>
+                    <span class="text-xs font-mono text-red-400 font-bold">—— 迷失在冗长流程中</span>
+                </div>
+
+                <div class="glass p-8 rounded-2xl border-l-4 border-brand-highlight/50 flex flex-col justify-between h-[360px]">
+                    <div>
+                        <div class="w-12 h-12 rounded-xl bg-brand-highlight/10 flex items-center justify-center text-brand-highlight text-xl mb-6">
+                            <i class="fa-solid fa-user-shield"></i>
+                        </div>
+                        <h3 class="text-xl font-bold text-slate-100">高危泥潭：无处不在的数字欺诈</h3>
+                        <p class="text-slate-400 text-sm mt-3 leading-relaxed">
+                            诱导扣款弹窗、高危权限申请、验证码窃取、恶意应用下载。传统自动执行的 Agent 一旦发生错误操作，会导致财产和人身信息泄露。
+                        </p>
+                    </div>
+                    <span class="text-xs font-mono text-brand-highlight font-bold">—— 严重缺乏安全防火墙</span>
+                </div>
+
+                <div class="glass p-8 rounded-2xl border-l-4 border-brand-purple/50 flex flex-col justify-between h-[360px]">
+                    <div>
+                        <div class="w-12 h-12 rounded-xl bg-brand-purple/10 flex items-center justify-center text-brand-purple text-xl mb-6">
+                            <i class="fa-solid fa-shield-virus"></i>
+                        </div>
+                        <h3 class="text-xl font-bold text-slate-100">求助阵痛：隐私泄露两难</h3>
+                        <p class="text-slate-400 text-sm mt-3 leading-relaxed">
+                            向子女或第三方平台求助时，不得不发送含有完整身份证号、银行卡号、手机号的原始屏幕截图，造成难以估量的二次泄露隐患。
+                        </p>
+                    </div>
+                    <span class="text-xs font-mono text-brand-purple font-bold">—— 屏幕隐私数据无法合规上云</span>
+                </div>
+            </div>
+        </section>
+
+        <!-- Slide 3: 核心理念 -->
+        <section id="slide-3" class="slide w-full max-w-6xl flex-col justify-between space-y-8">
+            <div>
+                <h2 class="text-4xl font-extrabold tracking-tight">Elva 老白的核心法则</h2>
+                <p class="text-slate-400 mt-1">守护银发数字晚年，安全与便利缺一不可</p>
+            </div>
+            
+            <div class="glass p-10 rounded-3xl relative overflow-hidden flex flex-col md:flex-row items-center gap-8 border border-white/10">
+                <div class="absolute -right-20 -bottom-20 w-80 h-80 bg-brand-accent/5 rounded-full blur-3xl pointer-events-none"></div>
+                
+                <div class="flex-1 space-y-6">
+                    <div class="inline-block px-3 py-1 rounded bg-brand-accent/10 border border-brand-accent/20 text-brand-accent text-xs font-bold uppercase tracking-wider">
+                        CORE COMMANDMENT
+                    </div>
+                    <h3 class="text-4xl md:text-5xl font-black leading-tight text-white">
+                        原始屏幕<span class="text-brand-accent">留在端侧</span>，<br>声导规划<span class="text-brand-purple">飞上云端</span>。
+                    </h3>
+                    <p class="text-slate-300 text-base leading-relaxed">
+                        手机截图、完整 OCR、身份证号、手机号、验证码、付款信息等极其敏感数据<strong>默认绝对不上传云端</strong>。端侧先完成页面观察、隐私去敏感化、风险初判；仅在任务逻辑复杂、需要多步导航规划时，才把<strong>脱敏后的结构化页面描述</strong>送给大模型，并由本地翻译为语音“声导”输出。
+                    </p>
+                </div>
+                
+                <div class="flex-shrink-0 w-full md:w-96 flex flex-col gap-4">
+                    <div class="glass p-5 rounded-2xl border-l-4 border-brand-accent flex items-start space-x-4">
+                        <span class="text-3xl text-brand-accent font-bold font-mono">端</span>
+                        <div>
+                            <h4 class="font-bold text-slate-100">端侧死守事实与隐私</h4>
+                            <p class="text-slate-400 text-xs mt-1">负责提取UI、敏感信息脱敏、拦截高危操作、合成语音播报</p>
+                        </div>
+                    </div>
+                    <div class="glass p-5 rounded-2xl border-l-4 border-brand-purple flex items-start space-x-4">
+                        <span class="text-3xl text-brand-purple font-bold font-mono">云</span>
+                        <div>
+                            <h4 class="font-bold text-slate-100">云侧智囊语义逻辑规划</h4>
+                            <p class="text-slate-400 text-xs mt-1">负责理解用户意图、搜索外部无障碍知识库、规划下一步操作节点</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Slide 4: 架构全景 -->
+        <section id="slide-4" class="slide w-full max-w-6xl flex-col justify-between space-y-6">
+            <div>
+                <h2 class="text-4xl font-extrabold tracking-tight">Elva 老白：端云五层闭环技术架构</h2>
+                <p class="text-slate-400 mt-1">从感知到安全拦截，让每一次数字辅导皆可解释、可阻断</p>
+            </div>
+            
+            <div class="grid grid-cols-1 md:grid-cols-5 gap-4">
+                <div class="glass p-5 rounded-2xl flex flex-col justify-between relative overflow-hidden border border-white/5">
+                    <div>
+                        <span class="text-xs font-mono text-brand-accent font-bold uppercase block mb-2">Layer 01</span>
+                        <h3 class="text-lg font-bold text-slate-200">1. 端侧轻量入口</h3>
+                        <p class="text-xs text-slate-400 mt-2 leading-relaxed">全时哨兵守护 (Always On) 与主动语音唤醒 (Trigger)。由系统事件或无障碍服务驱动。</p>
+                    </div>
+                    <div class="mt-4 pt-3 border-t border-white/5 text-[10px] text-brand-accent font-mono flex items-center space-x-1">
+                        <i class="fa-solid fa-headset"></i> <span>无打扰无感监听</span>
+                    </div>
+                </div>
+
+                <div class="glass p-5 rounded-2xl flex flex-col justify-between relative overflow-hidden border-brand-accent/30 border-2">
+                    <div class="absolute top-0 right-0 bg-brand-accent text-brand-bg text-[9px] font-bold px-2 py-0.5 rounded-bl">核心壁垒</div>
+                    <div>
+                        <span class="text-xs font-mono text-brand-accent font-bold uppercase block mb-2">Layer 02</span>
+                        <h3 class="text-lg font-bold text-slate-200">2. 隐私防火墙</h3>
+                        <p class="text-xs text-slate-400 mt-2 leading-relaxed">Screen Observer 提取UI元素；Privacy Firewall 对PII个人敏感数据无感脱敏，计算 `cloud_safe` 状态。</p>
+                    </div>
+                    <div class="mt-4 pt-3 border-t border-white/5 text-[10px] text-emerald-400 font-mono flex items-center space-x-1">
+                        <i class="fa-solid fa-shield-halved"></i> <span>阻断未脱敏数据上云</span>
+                    </div>
+                </div>
+
+                <div class="glass p-5 rounded-2xl flex flex-col justify-between relative overflow-hidden border border-white/5">
+                    <div>
+                        <span class="text-xs font-mono text-brand-accent font-bold uppercase block mb-2">Layer 03</span>
+                        <h3 class="text-lg font-bold text-slate-200">3. 本地路由决策</h3>
+                        <p class="text-xs text-slate-400 mt-2 leading-relaxed">Local Router 判断风险及复杂度。低风险如调大字号本地解决；高风险如扣款直接拦截；复杂业务才升级上云。</p>
+                    </div>
+                    <div class="mt-4 pt-3 border-t border-white/5 text-[10px] text-sky-400 font-mono flex items-center space-x-1">
+                        <i class="fa-solid fa-route"></i> <span>Gemma 端侧分流</span>
+                    </div>
+                </div>
+
+                <div class="glass p-5 rounded-2xl flex flex-col justify-between relative overflow-hidden border border-white/5">
+                    <div>
+                        <span class="text-xs font-mono text-brand-accent font-bold uppercase block mb-2">Layer 04</span>
+                        <h3 class="text-lg font-bold text-slate-200">4. 云端规划思考</h3>
+                        <p class="text-xs text-slate-400 mt-2 leading-relaxed">Cloud Planner (Gemma-Cloud) 基于结构化脱敏数据进行多步规划逻辑推理，输出可操作节点建议。</p>
+                    </div>
+                    <div class="mt-4 pt-3 border-t border-white/5 text-[10px] text-brand-purple font-mono flex items-center space-x-1">
+                        <i class="fa-solid fa-brain"></i> <span>RAG知识增强 Rerank</span>
+                    </div>
+                </div>
+
+                <div class="glass p-5 rounded-2xl flex flex-col justify-between relative overflow-hidden border border-brand-highlight/30 border">
+                    <div>
+                        <span class="text-xs font-mono text-brand-accent font-bold uppercase block mb-2">Layer 05</span>
+                        <h3 class="text-lg font-bold text-slate-200">5. 安全执行与声导</h3>
+                        <p class="text-xs text-slate-400 mt-2 leading-relaxed">Safety Guard 最终过滤。OpenClaw 仅在白名单下工作。TTS 转换为温馨的声音实时对老人声导指引。</p>
+                    </div>
+                    <div class="mt-4 pt-3 border-t border-white/5 text-[10px] text-brand-highlight font-mono flex items-center space-x-1">
+                        <i class="fa-solid fa-lock"></i> <span>OpenClaw 受控白名单</span>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Slide 5: 隐私脱敏对比 -->
+        <section id="slide-5" class="slide w-full max-w-6xl flex-col justify-between space-y-6">
+            <div>
+                <h2 class="text-4xl font-extrabold tracking-tight">隐私防火墙：端（高保真）与云（脱敏结构化）数据隔离</h2>
+                <p class="text-slate-400 mt-1">云端大模型只理解“任务逻辑”，绝不触及具体隐私实体</p>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8 items-stretch">
+                <!-- 左：端侧视角 -->
+                <div class="glass p-6 rounded-2xl border-l-4 border-brand-highlight flex flex-col justify-between">
+                    <div>
+                        <div class="flex justify-between items-center mb-4">
+                            <span class="px-2.5 py-1 rounded bg-brand-highlight/10 text-brand-highlight text-xs font-bold uppercase tracking-wider">端侧设备 (原始物理层)</span>
+                            <span class="text-xs text-slate-400"><i class="fa-solid fa-circle text-red-500 mr-1 animate-pulse"></i> 原始真实屏幕</span>
+                        </div>
+                        <div class="bg-brand-bg p-5 rounded-xl border border-white/5 font-mono text-xs text-slate-300 space-y-4">
+                            <div><span class="text-brand-highlight font-bold">// 原始输入表单数据</span></div>
+                            <div class="grid grid-cols-3 gap-2">
+                                <span class="text-slate-500">姓名:</span> <span class="col-span-2 text-slate-200">王建国 (张大爷)</span>
+                                <span class="text-slate-500">身份证号:</span> <span class="col-span-2 text-slate-200">32010219530512123X</span>
+                                <span class="text-slate-500">绑卡手机:</span> <span class="col-span-2 text-slate-200">13951888888</span>
+                                <span class="text-slate-500">支付验证码:</span> <span class="col-span-2 text-brand-highlight font-semibold bg-brand-highlight/10 px-1 rounded">382901</span>
+                                <span class="text-slate-500">目标按钮:</span> <span class="col-span-2 text-slate-200">"确认划扣款项：¥899.00"</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mt-4 p-4 rounded-xl bg-brand-highlight/5 border border-brand-highlight/10 text-xs text-slate-400 leading-relaxed">
+                        <i class="fa-solid fa-circle-info text-brand-highlight mr-1.5"></i>
+                        端侧保存高精度物理状态。以便支持本地TTS声控导航定位及实时应急打断，安全无漏。
+                    </div>
+                </div>
+
+                <!-- 右：云端视角 -->
+                <div class="glass p-6 rounded-2xl border-l-4 border-brand-accent flex flex-col justify-between">
+                    <div>
+                        <div class="flex justify-between items-center mb-4">
+                            <span class="px-2.5 py-1 rounded bg-brand-accent/10 text-brand-accent text-xs font-bold uppercase tracking-wider">云端大模型 (脱敏逻辑层)</span>
+                            <span class="text-xs text-slate-400"><i class="fa-solid fa-shield-halved text-brand-accent mr-1"></i> 安全脱敏 Payload</span>
+                        </div>
+                        <div class="bg-brand-bg p-5 rounded-xl border border-white/5 font-mono text-xs text-slate-300 space-y-4">
+                            <div><span class="text-brand-accent font-bold">// 结构化脱敏 ScreenObservation</span></div>
+                            <div class="grid grid-cols-3 gap-2">
+                                <span class="text-slate-500">页面类型:</span> <span class="col-span-2 text-slate-200">"第三方支付授权确认"</span>
+                                <span class="text-slate-500">敏感信息标记:</span> <span class="col-span-2 text-brand-accent font-bold">[姓名_PII_REDACTED], [身份证_PII_REDACTED]</span>
+                                <span class="text-slate-500">验证码字段:</span> <span class="col-span-2 text-brand-accent font-bold">[安全拦截敏感意图_验证码已脱敏]</span>
+                                <span class="text-slate-500">高风险因子:</span> <span class="col-span-2 text-brand-accent font-bold">[划扣按钮存在_高危付款交易=TRUE]</span>
+                                <span class="text-slate-500">cloud_safe:</span> <span class="col-span-2 px-2 py-0.5 rounded bg-brand-accent/20 text-brand-accent font-bold w-fit">TRUE (脱敏完备，允许云端多步规划)</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mt-4 p-4 rounded-xl bg-brand-accent/5 border border-brand-accent/10 text-xs text-slate-400 leading-relaxed">
+                        <i class="fa-solid fa-shield-halved text-brand-accent mr-1.5"></i>
+                        <strong>防火墙保障：</strong>即便云端大模型遭遇黑客攻击或数据劫持，黑客也拿不到老人的身份证号、真实卡号或银行验证码。
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Slide 6: 高仿真互动模拟沙盒 (核心：保留并升级演示 demo) -->
+        <section id="slide-6" class="slide w-full max-w-7xl flex-col justify-between space-y-4">
+            <div class="flex justify-between items-center">
+                <div>
+                    <h2 class="text-3xl font-extrabold tracking-tight">Elva 老白：四大核心 Demo 仿真展示与交互沙盒</h2>
+                    <p class="text-slate-400 text-xs">欢迎切换不同的演示链路及入口形态，逐步步进感受端云闭环数据流</p>
+                </div>
+                <!-- 入口形态 -->
+                <div class="flex bg-slate-800 p-1 rounded-xl border border-white/10 text-xs">
+                    <button onclick="setMode('sentinel')" id="mode-sentinel" class="px-3 py-1.5 rounded-lg font-bold transition-all duration-200 bg-brand-accent text-brand-bg">
+                        <i class="fa-solid fa-shield mr-1"></i>全时哨兵 (Always-On)
+                    </button>
+                    <button onclick="setMode('trigger')" id="mode-trigger" class="px-3 py-1.5 rounded-lg font-bold transition-all duration-200 text-slate-400">
+                        <i class="fa-solid fa-microphone mr-1"></i>主动唤醒 (Trigger-On)
+                    </button>
+                </div>
+            </div>
+
+            <!-- 主沙盒网格 -->
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-4 items-stretch h-[440px]">
+                
+                <!-- 左：场景选择 (占 3 列) -->
+                <div class="lg:col-span-3 glass p-4 rounded-2xl flex flex-col justify-between space-y-2">
+                    <div class="space-y-2">
+                        <span class="text-slate-400 text-xs font-bold uppercase tracking-wider block mb-3">切换演示链路</span>
+                        
+                        <button onclick="switchScenario(0)" id="scen-btn-0" class="w-full text-left p-2.5 rounded-xl border transition-all duration-150 flex items-center space-x-3 bg-brand-accent/10 border-brand-accent/30">
+                            <span class="w-8 h-8 rounded-lg bg-emerald-500/10 flex items-center justify-center text-brand-accent text-sm"><i class="fa-solid fa-window-maximize"></i></span>
+                            <div class="overflow-hidden">
+                                <h4 class="font-bold text-xs text-slate-100">1. 桌面表单协助</h4>
+                                <p class="text-[10px] text-slate-400 truncate">识别网页表单 & 安全核准</p>
+                            </div>
+                        </button>
+
+                        <button onclick="switchScenario(1)" id="scen-btn-1" class="w-full text-left p-2.5 rounded-xl border transition-all duration-150 flex items-center space-x-3 border-white/5 hover:bg-white/5">
+                            <span class="w-8 h-8 rounded-lg bg-sky-500/10 flex items-center justify-center text-sky-400 text-sm"><i class="fa-solid fa-mobile-screen"></i></span>
+                            <div class="overflow-hidden">
+                                <h4 class="font-bold text-xs text-slate-300">2. 手机截图导航</h4>
+                                <p class="text-[10px] text-slate-400 truncate">物理设置调大字号指引</p>
+                            </div>
+                        </button>
+
+                        <button onclick="switchScenario(2)" id="scen-btn-2" class="w-full text-left p-2.5 rounded-xl border transition-all duration-150 flex items-center space-x-3 border-white/5 hover:bg-white/5">
+                            <span class="w-8 h-8 rounded-lg bg-amber-500/10 flex items-center justify-center text-brand-highlight text-sm"><i class="fa-solid fa-shield-virus"></i></span>
+                            <div class="overflow-hidden">
+                                <h4 class="font-bold text-xs text-slate-300">3. 高危防骗阻断</h4>
+                                <p class="text-[10px] text-slate-400 truncate">高危验证码与支付拦截</p>
+                            </div>
+                        </button>
+
+                        <button onclick="switchScenario(3)" id="scen-btn-3" class="w-full text-left p-2.5 rounded-xl border transition-all duration-150 flex items-center space-x-3 border-white/5 hover:bg-white/5">
+                            <span class="w-8 h-8 rounded-lg bg-rose-500/10 flex items-center justify-center text-brand-rose text-sm"><i class="fa-solid fa-users-viewfinder"></i></span>
+                            <div class="overflow-hidden">
+                                <h4 class="font-bold text-xs text-slate-300">4. 家人求助脱敏</h4>
+                                <p class="text-[10px] text-slate-400 truncate">去除个人证件隐私求助卡</p>
+                            </div>
+                        </button>
+                    </div>
+
+                    <!-- 哨兵提示状态 -->
+                    <div id="sentinel-box" class="p-3 rounded-xl bg-emerald-950/20 border border-brand-accent/20 text-[11px] text-slate-300 flex items-center space-x-2">
+                        <span class="relative flex h-2 w-2">
+                          <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-brand-accent opacity-75"></span>
+                          <span class="relative inline-flex rounded-full h-2 w-2 bg-brand-accent"></span>
+                        </span>
+                        <span>哨兵：监听已部署，等待敏感事件。</span>
+                    </div>
+                </div>
+
+                <!-- 中：设备仿真模拟器 (占 4 列) -->
+                <div class="lg:col-span-4 glass p-4 rounded-2xl flex flex-col justify-between items-center relative overflow-hidden border border-white/10">
+                    <div class="w-full flex justify-between items-center border-b border-white/5 pb-2 mb-2">
+                        <span class="text-xs font-bold text-slate-300 flex items-center space-x-1">
+                            <i class="fa-solid fa-display text-slate-500"></i>
+                            <span id="device-title">老年医疗申领网页</span>
+                        </span>
+                        <span id="device-tag" class="text-[9px] font-bold px-1.5 py-0.5 rounded uppercase bg-brand-accent/20 text-brand-accent">Desktop View</span>
+                    </div>
+
+                    <!-- 仿真页面渲染核心 -->
+                    <div id="device-container" class="w-full flex-grow flex items-center justify-center bg-[#0d1220] rounded-xl p-4 border border-white/5 relative min-h-[220px]">
+                        <!-- (此处将由 JS 动态生成仿真 UI 页面) -->
+                    </div>
+
+                    <!-- 老白声导语音输出模拟 -->
+                    <div class="w-full mt-3 p-3 rounded-xl bg-brand-purple/10 border border-brand-purple/20 text-xs relative">
+                        <div class="absolute -top-2 left-3 bg-brand-purple text-white text-[8px] px-1 rounded uppercase font-bold tracking-wider">老白声导输出 (TTS Voice)</div>
+                        <p id="tts-output" class="text-slate-200 italic mt-1 font-medium leading-relaxed">“大爷别慌，老白正在帮您核实页面内容...”</p>
+                    </div>
+                </div>
+
+                <!-- 右：端云时序链路与安全审查 (占 5 列) -->
+                <div class="lg:col-span-5 glass p-4 rounded-2xl flex flex-col justify-between space-y-4">
+                    <div class="flex justify-between items-center border-b border-white/5 pb-2">
+                        <span class="text-xs font-bold text-slate-300"><i class="fa-solid fa-arrows-spin mr-1.5 text-brand-purple"></i>端云认知及规划流步进</span>
+                        <div class="flex space-x-1.5">
+                            <button onclick="prevStep()" class="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-xs"><i class="fa-solid fa-chevron-left"></i></button>
+                            <button onclick="nextStep()" class="px-2 py-1 rounded bg-brand-accent text-brand-bg font-bold text-xs">下一步 <i class="fa-solid fa-chevron-right"></i></button>
+                        </div>
+                    </div>
+
+                    <!-- 五步时序指示器 -->
+                    <div class="grid grid-cols-5 gap-1 text-center text-[9px] font-bold">
+                        <div id="step-i-0" class="py-1 rounded bg-brand-accent/20 text-brand-accent">1. 触发</div>
+                        <div id="step-i-1" class="py-1 rounded bg-slate-800 text-slate-500">2. 观察</div>
+                        <div id="step-i-2" class="py-1 rounded bg-slate-800 text-slate-500">3. 路由</div>
+                        <div id="step-i-3" class="py-1 rounded bg-slate-800 text-slate-500">4. 规划</div>
+                        <div id="step-i-4" class="py-1 rounded bg-slate-800 text-slate-500">5. 卫士</div>
+                    </div>
+
+                    <!-- 时序各步骤详细解释 -->
+                    <div class="bg-brand-bg p-4 rounded-xl border border-white/5 flex-grow overflow-y-auto">
+                        <h4 id="step-detail-title" class="font-bold text-xs text-brand-accent uppercase tracking-wider flex items-center space-x-1">
+                            <i class="fa-solid fa-bolt"></i> <span>EdgeEvent (端侧触发)</span>
+                        </h4>
+                        <p id="step-detail-body" class="text-xs text-slate-300 mt-2 leading-relaxed">系统监听到用户进入敏感医疗申领页面。Always On 启动，并在静默状态下通知 Screen Observer 准备提取节点树。</p>
+                        
+                        <!-- 数据对象 Payload 查看器 -->
+                        <div class="mt-3 pt-3 border-t border-white/5">
+                            <span class="text-[9px] font-bold text-slate-500 block mb-1">REAL-TIME DATA OBJECT PAYLOAD:</span>
+                            <pre id="step-payload" class="font-mono text-[10px] text-brand-purple bg-black/40 p-2 rounded max-h-[110px] overflow-y-auto">{}</pre>
+                        </div>
+                    </div>
+
+                    <!-- 隐私安全对比看板 -->
+                    <div class="grid grid-cols-2 gap-3 p-3 rounded-xl bg-slate-900 border border-white/5 text-[10px]">
+                        <div>
+                            <span class="text-slate-400 font-bold block mb-1">🚫 绝不上云的数据 (Local)</span>
+                            <ul id="local-safe-list" class="space-y-1 text-red-400 list-disc list-inside">
+                                <li>真实证件号 / 真实姓名</li>
+                                <li>手机验证码密文 / 截图</li>
+                            </ul>
+                        </div>
+                        <div>
+                            <span class="text-slate-400 font-bold block mb-1">✅ 允许上云数据 (To Cloud)</span>
+                            <ul id="cloud-safe-list" class="space-y-1 text-emerald-400 list-disc list-inside">
+                                <li>脱敏 PII 实体标记</li>
+                                <li>UI 结构与当前安全风险标签</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </section>
+
+        <!-- Slide 7: 五大核心数据流模型 -->
+        <section id="slide-7" class="slide w-full max-w-6xl flex-col justify-between space-y-6">
+            <div>
+                <h2 class="text-4xl font-extrabold tracking-tight">代码级数据实体：Elva 老白五大核心模型</h2>
+                <p class="text-slate-400 mt-1">强类型契约设计，保证 Agent 链路各环节的输入输出有迹可循、坚不可摧</p>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-5 gap-3">
+                <div class="glass p-5 rounded-2xl flex flex-col justify-between h-[340px]">
+                    <div>
+                        <div class="w-8 h-8 rounded-lg bg-slate-800 text-brand-accent flex items-center justify-center font-bold font-mono text-sm mb-3">01</div>
+                        <h3 class="font-bold text-slate-100">EdgeEvent</h3>
+                        <p class="text-[11px] text-slate-400 mt-2 leading-relaxed">
+                            <strong>端侧触发事件。</strong>描述系统捕获事件类别、触发置信度、来源组件以及数据是否受本地约束锁定。
+                        </p>
+                    </div>
+                    <span class="text-[9px] font-mono text-slate-500">Event Collector 发出</span>
+                </div>
+
+                <div class="glass p-5 rounded-2xl flex flex-col justify-between h-[340px] border border-brand-accent/20">
+                    <div>
+                        <div class="w-8 h-8 rounded-lg bg-emerald-950 text-brand-accent flex items-center justify-center font-bold font-mono text-sm mb-3">02</div>
+                        <h3 class="font-bold text-slate-100">ScreenObservation</h3>
+                        <p class="text-[11px] text-slate-400 mt-2 leading-relaxed">
+                            <strong>屏幕观察脱敏结果。</strong>包含设备布局结构、脱敏字段字典、安全因子判定位及关乎上云的 `cloud_safe` 开关。
+                        </p>
+                    </div>
+                    <span class="text-[9px] font-mono text-brand-accent">最关键的隐私边界线</span>
+                </div>
+
+                <div class="glass p-5 rounded-2xl flex flex-col justify-between h-[340px]">
+                    <div>
+                        <div class="w-8 h-8 rounded-lg bg-slate-800 text-sky-400 flex items-center justify-center font-bold font-mono text-sm mb-3">03</div>
+                        <h3 class="font-bold text-slate-100">RoutingDecision</h3>
+                        <p class="text-[11px] text-slate-400 mt-2 leading-relaxed">
+                            <strong>本地路由决策。</strong>判定本地响应、拒绝上云还是启动云端大模型协作，将不需要云端理解的任务分流在本地。
+                        </p>
+                    </div>
+                    <span class="text-[9px] font-mono text-sky-400">Local Router 控制层</span>
+                </div>
+
+                <div class="glass p-5 rounded-2xl flex flex-col justify-between h-[340px]">
+                    <div>
+                        <div class="w-8 h-8 rounded-lg bg-slate-800 text-brand-purple flex items-center justify-center font-bold font-mono text-sm mb-3">04</div>
+                        <h3 class="font-bold text-slate-100">NextAction</h3>
+                        <p class="text-[11px] text-slate-400 mt-2 leading-relaxed">
+                            <strong>下一步动作规范。</strong>云端基于脱敏上下文下发的语义级任务操作，包括动作定位、参数要求、解释以及风险系数评估。
+                        </p>
+                    </div>
+                    <span class="text-[9px] font-mono text-brand-purple">Cloud Planner 发出</span>
+                </div>
+
+                <div class="glass p-5 rounded-2xl flex flex-col justify-between h-[340px] border border-brand-highlight/20">
+                    <div>
+                        <div class="w-8 h-8 rounded-lg bg-amber-950 text-brand-highlight flex items-center justify-center font-bold font-mono text-sm mb-3">05</div>
+                        <h3 class="font-bold text-slate-100">GuardDecision</h3>
+                        <p class="text-[11px] text-slate-400 mt-2 leading-relaxed">
+                            <strong>安全过滤器决策。</strong>针对高风险交易或敏感权限做终极校验，直接执行 Allow、Require_Confirmation 或 Deny 并降级播报。
+                        </p>
+                    </div>
+                    <span class="text-[9px] font-mono text-brand-highlight">执行组件的终极门锁</span>
+                </div>
+            </div>
+        </section>
+
+        <!-- Slide 8: 模型分工 -->
+        <section id="slide-8" class="slide w-full max-w-6xl flex-col justify-between space-y-6">
+            <div>
+                <h2 class="text-4xl font-extrabold tracking-tight">端云协同分工：Gemma 双模型合理协同机制</h2>
+                <p class="text-slate-400 mt-1">最大程度挖掘小模型端侧独立运行优势与云端模型深度推理潜能</p>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <!-- 左：端侧 Gemma 2B 引擎 -->
+                <div class="glass p-8 rounded-3xl border border-white/5 relative flex flex-col justify-between h-[380px]">
+                    <div>
+                        <div class="flex items-center space-x-3 mb-6">
+                            <span class="w-10 h-10 rounded-xl bg-emerald-500/10 flex items-center justify-center text-brand-accent text-lg"><i class="fa-solid fa-microchip"></i></span>
+                            <div>
+                                <h3 class="text-xl font-bold text-white">Gemma-2B 端侧极低延迟引擎</h3>
+                                <p class="text-xs text-brand-accent font-mono">本地运行 · 绝无网路损耗 · 隐私零风险</p>
+                            </div>
+                        </div>
+                        <p class="text-slate-300 text-sm leading-relaxed mb-4">
+                            负责执行本地无延迟的极速响应任务，以及核心安全敏感的动作。
+                        </p>
+                        <ul class="space-y-2 text-xs text-slate-400">
+                            <li><i class="fa-solid fa-check text-brand-accent mr-1.5"></i> <strong>敏感实体剔除：</strong> 本地发现并隐藏身份证号码、真实手机、动态OTP。</li>
+                            <li><i class="fa-solid fa-check text-brand-accent mr-1.5"></i> <strong>极低耗电触发判定：</strong> 判断是否需要引导用户或弹出老白气泡。</li>
+                            <li><i class="fa-solid fa-check text-brand-accent mr-1.5"></i> <strong>低风险设置跳转：</strong> 独立指挥 Accessibility 跳转并标红调大字号项。</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- 右：云端 Gemma-Cloud 规划大脑 -->
+                <div class="glass p-8 rounded-3xl border border-white/5 relative flex flex-col justify-between h-[380px]">
+                    <div>
+                        <div class="flex items-center space-x-3 mb-6">
+                            <span class="w-10 h-10 rounded-xl bg-purple-500/10 flex items-center justify-center text-brand-purple text-lg"><i class="fa-solid fa-cloud-bolt"></i></span>
+                            <div>
+                                <h3 class="text-xl font-bold text-white">Gemma-Cloud 复杂逻辑规划大脑</h3>
+                                <p class="text-xs text-brand-purple font-mono">云端 RAG 推理 · 复杂流程分析 · 柔性规划</p>
+                            </div>
+                        </div>
+                        <p class="text-slate-300 text-sm leading-relaxed mb-4">
+                            仅在端侧 `cloud_safe=true` 的脱敏结构数据到达后，进行跨业务、高信息密度的多步规划思考。
+                        </p>
+                        <ul class="space-y-2 text-xs text-slate-400">
+                            <li><i class="fa-solid fa-check text-brand-purple mr-1.5"></i> <strong>复杂政务逻辑理解：</strong> 跨多张页面，结合 RAG 提示老人当前流程在办什么。</li>
+                            <li><i class="fa-solid fa-check text-brand-purple mr-1.5"></i> <strong>暖心协助简报生成：</strong> 理解复杂的页面报错并提炼为脱敏温馨的家人协助摘要。</li>
+                            <li><i class="fa-solid fa-check text-brand-purple mr-1.5"></i> <strong>受控动作流程推荐：</strong> 基于行为和全局场景，规划下一步最佳推荐点击按钮。</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Slide 9: 落地实施路线图 -->
+        <section id="slide-9" class="slide w-full max-w-6xl flex-col justify-between space-y-6">
+            <div>
+                <h2 class="text-4xl font-extrabold tracking-tight">Elva 老白：清晰的阶梯式工程集成路线图</h2>
+                <p class="text-slate-400 mt-1">从高度确定性 V1 原型，到结合 OpenClaw 的真实系统集成</p>
+            </div>
+
+            <div class="relative w-full py-4 mt-4">
+                <!-- 贯穿线 -->
+                <div class="absolute h-1 bg-slate-800 left-4 right-4 top-1/2 -translate-y-1/2 z-0"></div>
+                <div class="absolute h-1 bg-brand-accent left-4 w-1/5 top-1/2 -translate-y-1/2 z-0"></div>
+
+                <div class="grid grid-cols-1 md:grid-cols-5 gap-4 relative z-10">
+                    <div class="glass p-5 rounded-xl border-t-4 border-brand-accent">
+                        <span class="text-xs font-mono text-brand-accent font-bold">PHASE 01 (DONE)</span>
+                        <h4 class="font-bold text-slate-100 mt-2 text-xs">V1: 确定性沙盒原型</h4>
+                        <p class="text-[10px] text-slate-400 mt-2 leading-relaxed">跑通前端演示程序。定型 5 大类核心数据对象结构及 4 个高保真 Demo Scenarios 逻辑闭环。</p>
+                    </div>
+
+                    <div class="glass p-5 rounded-xl border-t-4 border-slate-700">
+                        <span class="text-xs font-mono text-slate-400">PHASE 02</span>
+                        <h4 class="font-bold text-slate-200 mt-2 text-xs">V2: 云端 Planner 替换</h4>
+                        <p class="text-[10px] text-slate-400 mt-2 leading-relaxed">接通云侧 Gemma-Cloud。通过 Schema 校验与 RAG 外部合规政策数据库连通，生成智能规划。</p>
+                    </div>
+
+                    <div class="glass p-5 rounded-xl border-t-4 border-slate-700">
+                        <span class="text-xs font-mono text-slate-400">PHASE 03</span>
+                        <h4 class="font-bold text-slate-200 mt-2 text-xs">V3: Android 无障碍框架</h4>
+                        <p class="text-[10px] text-slate-400 mt-2 leading-relaxed">在 Android 侧集成 AccessibilityService 与通知拦截层。实现真实提取屏幕物理元素及防脱敏泄漏。</p>
+                    </div>
+
+                    <div class="glass p-5 rounded-xl border-t-4 border-slate-700">
+                        <span class="text-xs font-mono text-slate-400">PHASE 04</span>
+                        <h4 class="font-bold text-slate-200 mt-2 text-xs">V4: 端侧 Gemma 本地化</h4>
+                        <p class="text-[10px] text-slate-400 mt-2 leading-relaxed">通过本地硬件加速在端侧运行轻量级小模型。实现独立脱敏拦截，网络离线依然安全无阻。</p>
+                    </div>
+
+                    <div class="glass p-5 rounded-xl border-t-4 border-slate-700">
+                        <span class="text-xs font-mono text-slate-400">PHASE 05</span>
+                        <h4 class="font-bold text-slate-200 mt-2 text-xs">V5: OpenClaw 受控闭环</h4>
+                        <p class="text-[10px] text-slate-400 mt-2 leading-relaxed">对接 OpenClaw，允许在安全白名单内对设备执行 Click、Type、Scroll、Summarize 动作。</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="p-4 rounded-xl bg-slate-900/50 border border-white/5 text-xs flex justify-between items-center">
+                <span><i class="fa-solid fa-code-fork mr-2 text-brand-purple"></i> <strong>真实开发路径：</strong> 1. 模拟 Planner &rarr; 2. Gemma 云端规划大模型 &rarr; 3. Android 无障碍隐私网关 &rarr; 4. 端侧 Gemma 本地化 &rarr; 5. OpenClaw 白名单执行</span>
+                <span class="text-brand-accent font-bold">步步为营，安全可靠</span>
+            </div>
+        </section>
+
+        <!-- Slide 10: 商业与社会价值 -->
+        <section id="slide-10" class="slide w-full max-w-6xl flex-col justify-between space-y-6">
+            <div>
+                <h2 class="text-4xl font-extrabold tracking-tight">Elva 老白的社会责任与商业化潜力</h2>
+                <p class="text-slate-400 mt-1">智能时代，不能让弱势群体成为安全与体验的盲区</p>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8 items-stretch">
+                <div class="glass p-8 rounded-3xl flex flex-col justify-between border border-white/5">
+                    <div>
+                        <div class="w-12 h-12 rounded-2xl bg-emerald-500/10 flex items-center justify-center text-brand-accent text-2xl mb-6">
+                            <i class="fa-solid fa-heart-pulse"></i>
+                        </div>
+                        <h3 class="text-2xl font-bold text-slate-100 mb-4">社会公益：消弭“银发鸿沟”</h3>
+                        <p class="text-slate-300 text-sm leading-relaxed">
+                            我国老龄化进程加速，大量老人因无法掌握复杂的APP操作而被现代数字社会“拒之门外”，欺诈频发更是痛上加痛。Elva 老白不仅是一个工具，更是陪伴老人的贴身助手。在保障隐私不泄露的前提下，让老人们听得到、用得起、点得安心。
+                        </p>
+                    </div>
+                </div>
+
+                <div class="glass p-8 rounded-3xl flex flex-col justify-between border border-white/5">
+                    <div>
+                        <div class="w-12 h-12 rounded-2xl bg-purple-500/10 flex items-center justify-center text-brand-purple text-2xl mb-6">
+                            <i class="fa-solid fa-handshake"></i>
+                        </div>
+                        <h3 class="text-2xl font-bold text-slate-100 mb-4">商业模式：B端定制与普惠无障碍服务</h3>
+                        <p class="text-slate-300 text-sm leading-relaxed">
+                            通过提供标准化的端云协同隐私防火墙及声导接口，可直接为以下场景赋能：
+                        </p>
+                        <ul class="space-y-2 text-xs text-slate-400 mt-4">
+                            <li><i class="fa-solid fa-angle-right text-brand-purple mr-1.5"></i> <strong>民政、政务、公共事业App：</strong> 一键注入，极速支持无障碍语音导申。</li>
+                            <li><i class="fa-solid fa-angle-right text-brand-purple mr-1.5"></i> <strong>智能手机终端厂商：</strong> 集成为系统底层原生无障碍级“银发卫士”服务。</li>
+                            <li><i class="fa-solid fa-angle-right text-brand-purple mr-1.5"></i> <strong>养老院、金融社区定制：</strong> 连通区域家人协助生态，构建全生命周期帮扶。</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Slide 11: 总结与问答 -->
+        <section id="slide-11" class="slide w-full max-w-6xl flex-col justify-center items-center text-center space-y-8">
+            <div class="inline-flex items-center space-x-2 px-4 py-1.5 rounded-full bg-brand-accent/10 border border-brand-accent/20 text-brand-accent text-sm font-semibold tracking-wide">
+                <i class="fa-solid fa-microphone-lines animate-pulse-soft"></i>
+                <span>“大爷您放心点，老白在一旁给您看着呢”</span>
+            </div>
+            <h2 class="text-5xl font-extrabold tracking-tight text-white max-w-4xl leading-snug">
+                安全可控，温暖有声<br>—— Elva 老白，守护老人的数字晚年
+            </h2>
+            <p class="text-xl text-slate-300 max-w-3xl mx-auto leading-relaxed">
+                我们用端侧死锁住隐私底线，用云端大模型指明操作逻辑。<br>
+                在数字时代狂飙的洪流中，拉住老人们的手，安全无障碍地一齐向前。
+            </p>
+            <div class="w-20 h-1 bg-brand-accent mx-auto rounded-full"></div>
+            
+            <div class="flex flex-col items-center space-y-4 pt-4">
+                <p class="text-sm text-brand-textMuted uppercase font-bold tracking-widest">Elva 老白 研发团队 - 感谢各位评委</p>
+                <div class="flex space-x-6">
+                    <span class="text-sm bg-brand-card px-4 py-2 rounded-xl border border-white/10 flex items-center space-x-2 text-slate-200">
+                        <i class="fa-solid fa-compact-disc text-brand-accent"></i>
+                        <span>演示视频录制就绪 / 模拟原型运行稳定</span>
+                    </span>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- 底部控制栏 -->
+    <footer class="w-full px-8 py-4 flex justify-between items-center border-t border-white/5 z-50 glass">
+        <!-- 上一步 -->
+        <button onclick="prevSlide()" class="px-5 py-2 rounded-xl bg-white/5 hover:bg-white/10 text-sm font-semibold flex items-center space-x-2 border border-white/5 transition-all duration-200 active:scale-95">
+            <i class="fa-solid fa-arrow-left text-xs"></i>
+            <span>上一步 (Prev)</span>
+        </button>
+
+        <!-- 进度条 -->
+        <div class="flex-grow mx-8 max-w-md hidden md:block">
+            <div class="w-full bg-slate-800 h-1.5 rounded-full overflow-hidden">
+                <div id="progress-bar" class="bg-gradient-to-r from-brand-accent to-brand-purple h-full w-[9%] transition-all duration-300"></div>
+            </div>
+        </div>
+
+        <!-- 下一步 -->
+        <button onclick="nextSlide()" class="px-5 py-2 rounded-xl bg-brand-accent hover:bg-brand-accent/90 text-brand-bg font-bold text-sm flex items-center space-x-2 transition-all duration-200 active:scale-95">
+            <span>下一步 (Next)</span>
+            <i class="fa-solid fa-arrow-right text-xs"></i>
+        </button>
+    </footer>
+
+    <!-- JavaScript 交互代码 & 沙盒模拟引擎 -->
+    <script>
+        let currentSlide = 1;
+        const totalSlides = 11;
+
+        // 沙盒状态变量
+        let selectedScenario = 0;
+        let selectedMode = 'sentinel';
+        let currentStep = 0; // 每个场景下的端云链路步进 (0 到 4)
+
+        // 场景仿真展示数据定义
+        const scenarios = [
+            {
+                title: "桌面医疗保障申领表",
+                tag: "Desktop View",
+                tts: "“大爷，老白看到这是一个申领保险理赔的表单。您可以先说您的姓名，老白会自动帮您填写并隐去真实的文字，防止泄露。”",
+                localSafe: ["张大爷 (真实姓名不离端)", "3201021953******** (身份证脱敏)"],
+                cloudSafe: ["页面特征：[政务保险表单]", "脱敏实体标记：[姓名_已保护]", "敏感词汇：[理赔、申请额度]"],
+                steps: [
+                    {
+                        title: "1. EdgeEvent (端侧捕获)",
+                        body: "系统捕获到用户打开了网页表单。全时哨兵检测到页面含有“身份证”、“银行卡”敏感词汇，即刻唤醒本地 Screen Observer。",
+                        payload: { event_type: "form_interaction", source: "Browser_Extension", trigger_keyword: "身份证", has_sensitive_fields: true }
+                    },
+                    {
+                        title: "2. ScreenObservation (端侧脱敏)",
+                        body: "端侧屏幕观察器运行。发现姓名和身份证号已输入，本地 Privacy Firewall 启动，擦除真实值并完成符号化标记。生成 cloud_safe = true。",
+                        payload: { page_type: "insurance_form", fields: [{ name: "Name", value: "[REDACTED]" }, { name: "ID_Number", value: "[REDACTED]" }], cloud_safe: true }
+                    },
+                    {
+                        title: "3. RoutingDecision (本地分流)",
+                        body: "Local Router 读取脱敏结果。由于包含跨页面多步领款流程，属于中高任务复杂度，路由推荐为：`cloud_planner` (提权上云深度规划)。",
+                        payload: { complexity: "medium_high", route: "cloud_planner", contains_unredacted_pii: false, local_fallback: false }
+                    },
+                    {
+                        title: "4. NextAction (云大脑规划)",
+                        body: "Gemma-Cloud 根据脱敏输入，结合理赔业务指南规划下一步动作。建议用户补充未填写的手机号字段，并在最后提交前执行安全核对。",
+                        payload: { suggested_action: "type_text", target_element: "phone_field", voice_prompt: "请补充填写您的绑卡手机号", risk_level: "low" }
+                    },
+                    {
+                        title: "5. GuardDecision (安全卫士拦截)",
+                        body: "最后进入本地安全卫士，过滤云端建议。判定动作风险等级为 Low (仅填写未提交)。允许通过，翻译为温暖语音输出：“大爷，您可以填手机号啦”。",
+                        payload: { decision: "allow", require_human_check: false, risk_level: "low", security_policy: "allowlist_only_click_and_type" }
+                    }
+                ],
+                renderUI: `
+                    <div class="w-full h-full flex flex-col justify-between text-left text-xs text-slate-300">
+                        <div class="bg-slate-900 p-2.5 rounded-lg border border-white/5 space-y-2">
+                            <h5 class="text-brand-accent font-bold text-center border-b border-white/5 pb-1 flex items-center justify-center"><i class="fa-solid fa-hospital-user mr-1"></i>老年医疗保障申请网</h5>
+                            <div class="grid grid-cols-4 gap-1.5 items-center">
+                                <label class="text-slate-500">申请姓名：</label>
+                                <input type="text" value="张大爷" disabled class="col-span-3 bg-slate-800 border border-slate-700 rounded px-1.5 py-0.5 text-slate-300">
+                                
+                                <label class="text-slate-500">证件号码：</label>
+                                <input type="text" value="3201021953********" disabled class="col-span-3 bg-slate-800 border border-brand-accent/50 rounded px-1.5 py-0.5 text-brand-accent font-bold font-mono">
+                                
+                                <label class="text-slate-500">申领额度：</label>
+                                <span class="col-span-3 text-brand-highlight font-bold font-mono">¥ 5,000.00 元</span>
+                            </div>
+                        </div>
+                        <button class="w-full bg-slate-800 border border-white/10 hover:border-brand-accent/30 py-2.5 rounded-lg font-bold text-center text-[11px] text-slate-300 flex items-center justify-center space-x-1.5 transition-all">
+                            <i class="fa-solid fa-hand-pointer text-brand-accent"></i>
+                            <span>确认提交（老白核实后可点击）</span>
+                        </button>
+                    </div>
+                `
+            },
+            {
+                title: "手机屏幕设置调节",
+                tag: "Mobile View",
+                tts: "“大爷别急，老白看清手机屏幕了。要想把字调大，请您顺着老白在屏幕中间标记的绿色发光圆圈，点击‘显示与亮度’那个选项。”",
+                localSafe: ["手机无PII个人敏感数据", "原始设置列表截图滞留本地"],
+                cloudSafe: ["未触发脱敏，无PII泄露风险", "cloud_safe = false (完全本地执行)"],
+                steps: [
+                    {
+                        title: "1. EdgeEvent (端侧触发)",
+                        body: "用户主动按压语音键唤醒，声控提出请求：“帮我把手机里的字调大一点，看不清”。Edge 接收语音信号并触发截屏。",
+                        payload: { event_type: "voice_request", input_text: "把手机字调大", source: "User_Trigger", secure_channel: true }
+                    },
+                    {
+                        title: "2. ScreenObservation (端侧观察)",
+                        body: "端侧 Gemma-2B 观察截图节点树。快速定位到设置界面下的“显示与亮度”及“辅助无障碍”节点。判定为低风险设置问题。",
+                        payload: { page_type: "android_settings_list", matches: ["Display_and_Brightness", "Accessibility"], cloud_safe: false }
+                    },
+                    {
+                        title: "3. RoutingDecision (本地路由)",
+                        body: "Local Router 判定当前操作为经典“系统级设置跳转”。风险度极低，本地 Gemma-2B 完全具备配置能力。路由定标：`local_only` (闭网执行)。",
+                        payload: { complexity: "low", route: "local_only", local_fallback: true, reason: "simple_system_navigation_no_need_cloud" }
+                    },
+                    {
+                        title: "4. NextAction (端侧执行规划)",
+                        body: "由于不升级上云，端侧推理直接输出 Action。命令本地无障碍执行层准备在“显示与亮度”节点位置绘制发光圈标记，并进行声控提醒。",
+                        payload: { suggested_action: "highlight_element", target_element: "settings_item_display", position_rect: { x: 120, y: 350, w: 200, h: 45 } }
+                    },
+                    {
+                        title: "5. GuardDecision (安全卫士通过)",
+                        body: "安全过滤器对本地动作评估：由于仅为屏幕标识引导，风险评定为 Zero。无条件放行（Allow），指引语音无延迟发出。",
+                        payload: { decision: "allow", require_human_check: false, risk_level: "zero", reason: "local_system_navigation_safe" }
+                    }
+                ],
+                renderUI: `
+                    <div class="w-[180px] h-full flex flex-col justify-between bg-slate-900 border border-white/10 rounded-2xl p-2.5 text-left text-[10px] space-y-1.5">
+                        <div class="text-center font-bold text-slate-400 border-b border-white/5 pb-1">系统设置</div>
+                        <div class="space-y-1">
+                            <div class="p-1.5 rounded bg-slate-800 text-slate-400 flex justify-between items-center">
+                                <span>无线局域网</span> <i class="fa-solid fa-chevron-right text-[8px]"></i>
+                            </div>
+                            <div class="p-1.5 rounded bg-slate-800 text-slate-400 flex justify-between items-center">
+                                <span>声音与振动</span> <i class="fa-solid fa-chevron-right text-[8px]"></i>
+                            </div>
+                            <!-- 标记引导 -->
+                            <div class="p-1.5 rounded border-2 border-brand-accent bg-emerald-950/20 text-brand-accent font-bold flex justify-between items-center relative">
+                                <span>显示与亮度</span> 
+                                <span class="flex h-2 w-2">
+                                  <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-brand-accent opacity-75"></span>
+                                  <span class="relative inline-flex rounded-full h-2 w-2 bg-brand-accent"></span>
+                                </span>
+                                <i class="fa-solid fa-chevron-right text-[8px]"></i>
+                            </div>
+                            <div class="p-1.5 rounded bg-slate-800 text-slate-400 flex justify-between items-center">
+                                <span>无障碍辅助</span> <i class="fa-solid fa-chevron-right text-[8px]"></i>
+                            </div>
+                        </div>
+                        <div class="text-[9px] text-brand-accent font-bold text-center bg-brand-accent/10 py-1 rounded">老白引导圆圈已绘制</div>
+                    </div>
+                `
+            },
+            {
+                title: "防欺诈高危扣款阻断",
+                tag: "Mobile Alert",
+                tts: "“大爷别点！老白帮您死死拦住了！这是冒充公检法的典型欺诈。千万不要输入短信里的验证码，已经帮您拉入紧急拦截库。”",
+                localSafe: ["验证码原文 [382901] 死守在端侧", "高危欺诈拦截日志本地留存"],
+                cloudSafe: ["cloud_safe = false (涉及短信验证码强制不出端)"],
+                steps: [
+                    {
+                        title: "1. EdgeEvent (端侧触发)",
+                        body: "全时哨兵监听到系统后台收到涉密付款动态验证码，且前台弹窗要求输入。两项高危因子重合，立刻拉响 Edge 橙色警报。",
+                        payload: { event_type: "sms_interception", app_context: "danger_pay_page", key_phrases: ["验证码", "涉嫌违规", "扣款"] }
+                    },
+                    {
+                        title: "2. ScreenObservation (端侧观察)",
+                        body: "Screen Observer 锁定前台输入框。Privacy Firewall 强制判定：当前页面存在动态密码输入区且有财产划转风险，极大概率为欺诈场景，标识上云禁区。",
+                        payload: { has_otp_field: true, is_fraud_candidate: true, cloud_safe: false }
+                    },
+                    {
+                        title: "3. RoutingDecision (本地拦截)",
+                        body: "Local Router 启动最高优先级安全防护策略：拒绝数据离端规划，直接将路由指引分流到本地强拦截网关 `stop`。",
+                        payload: { complexity: "urgent_danger", route: "stop", block_cloud: true, reason: "contain_sensitive_otp_risk" }
+                    },
+                    {
+                        title: "4. NextAction (端侧防御部署)",
+                        body: "端侧本地引擎抛弃一切自动点击，强制下发防守 Action：强行锁定屏幕输入，弹出红色欺诈警告覆层，通过大分贝播报警告老人退避。",
+                        payload: { suggested_action: "emergency_stop", ui_overlay: "fraud_warning", voice_warning: "高危风险欺诈提示" }
+                    },
+                    {
+                        title: "5. GuardDecision (安全卫士坚决Deny)",
+                        body: "安全卫士执行最严铁律。判定 GuardDecision 为 `deny`（坚决拒绝云执行与误点击），全盘阻止。老白大喇叭安全防护盾完全展开！",
+                        payload: { decision: "deny", require_human_check: true, reason: "blocked_by_silver_shield_policy", auto_protect: true }
+                    }
+                ],
+                renderUI: `
+                    <div class="w-[180px] h-full flex flex-col justify-between bg-slate-900 border-2 border-brand-highlight rounded-2xl p-2.5 text-left text-[10px] space-y-1.5 relative">
+                        <!-- 覆盖欺诈警告 -->
+                        <div class="absolute inset-0 bg-brand-highlight/95 rounded-xl flex flex-col justify-center items-center text-center p-3 text-brand-bg z-10">
+                            <i class="fa-solid fa-triangle-exclamation text-3xl mb-2 animate-bounce"></i>
+                            <h5 class="font-extrabold text-xs">老白已深度拦截！</h5>
+                            <p class="text-[9px] mt-1 font-bold">这极大概率是骗局。<br>请切勿转账，千万不要输入验证码！</p>
+                        </div>
+                        <div class="text-center font-bold text-slate-400">安全扣款账户</div>
+                        <div class="space-y-1 opacity-20">
+                            <span>请输入卡密码：</span>
+                            <input type="password" value="******" disabled class="w-full bg-slate-800 rounded p-1">
+                        </div>
+                    </div>
+                `
+            },
+            {
+                title: "远程家人协助卡",
+                tag: "SaaS Shared Card",
+                tts: "“大爷别急，老白已经把您遇到的申领医保错误做成了一张干净的安全求助卡，发送给您女儿了。卡里的证件隐私老白都替您抹掉了。”",
+                localSafe: ["原图上的卡号全部擦除", "端侧本地状态日志安全隔离"],
+                cloudSafe: ["允许上云：脱敏无PII信息理赔报错简报"],
+                steps: [
+                    {
+                        title: "1. EdgeEvent (端侧触发)",
+                        body: "用户在页面上屡次申领医保受阻报错，主动触发按钮或大喊：“老白，帮我发给我姑娘，让她帮我瞧瞧咋回事。”",
+                        payload: { event_type: "family_assist_request", trigger: "Voice_Button", target_contact: "女儿" }
+                    },
+                    {
+                        title: "2. ScreenObservation (端侧脱敏)",
+                        body: "Screen Observer 识别出错处“网络错误/无此用户”，同时将原网页上的老人身份证号彻底脱敏。标识 cloud_safe = true 允许生成简报。",
+                        payload: { err_message: "User identity verify failed", is_identity_redacted: true, cloud_safe: true }
+                    },
+                    {
+                        title: "3. RoutingDecision (提级上云)",
+                        body: "Local Router 判定生成一份温馨有同理心、大字号的中文简报需要云端 Gemma 大模型进行语义转换。路由引流到：`cloud_planner`。",
+                        payload: { complexity: "medium", route: "cloud_planner", cloud_safe: true }
+                    },
+                    {
+                        title: "4. NextAction (云大脑文案生成)",
+                        body: "Gemma-Cloud 规划动作：调用 `summarize_for_family` 工具，组织了一份干净的情感化汇报信息，描述报错事实，丝毫不涉及隐私原文。",
+                        payload: { tool_selected: "summarize_for_family", summary_text: "爸爸今天办理申领保险受阻。错误原因为：身份核对不匹配。请子女登录一键核对。" }
+                    },
+                    {
+                        title: "5. GuardDecision (放行允许发送)",
+                        body: "安全守卫再次比对简报。确定简报中无任何银行卡号、卡密或未脱敏身份证原文。判定结果：`allow` (在老人安全确认后一键下发)。",
+                        payload: { decision: "allow", require_confirmation_on_send: true, share_target: "Family_Dashboard" }
+                    }
+                ],
+                renderUI: `
+                    <div class="w-full h-full flex flex-col justify-between text-left text-[10px] text-slate-300">
+                        <div class="bg-slate-900 p-2.5 rounded-lg border-2 border-brand-rose space-y-2">
+                            <h5 class="text-brand-rose font-bold text-center border-b border-white/5 pb-1 flex items-center justify-center"><i class="fa-solid fa-heart mr-1"></i>老白守护求助简报（女儿端）</h5>
+                            <div class="space-y-1 text-slate-400">
+                                <p><strong>协助对象：</strong> 爸爸 (王建国)</p>
+                                <p><strong>今日状态：</strong> 办理医疗申报受阻</p>
+                                <p class="text-brand-rose bg-rose-950/20 p-1.5 rounded border border-brand-rose/20 leading-normal">
+                                    <strong>老白诊断：</strong> 身份证录入未匹配。敏感隐私已在端侧完成安全红线脱敏过滤。
+                                </p>
+                            </div>
+                        </div>
+                        <button class="w-full bg-brand-rose text-white py-2 rounded-lg font-bold text-center flex items-center justify-center space-x-1.5">
+                            <i class="fa-solid fa-paper-plane"></i>
+                            <span>已成功一键发给女儿</span>
+                        </button>
+                    </div>
+                `
+            }
+        ];
+
+        function switchScenario(index) {
+            selectedScenario = index;
+            currentStep = 0; // 重置为第一步
+            updateDemoSandbox();
+        }
+
+        function setMode(mode) {
+            selectedMode = mode;
+            // 更新按钮高亮
+            const activeClass = "bg-brand-accent text-brand-bg";
+            const inactiveClass = "text-slate-400";
+            if (mode === 'sentinel') {
+                document.getElementById('mode-sentinel').className = `px-3 py-1.5 rounded-lg font-bold transition-all duration-200 ${activeClass}`;
+                document.getElementById('mode-trigger').className = `px-3 py-1.5 rounded-lg font-bold transition-all duration-200 ${inactiveClass}`;
+                document.getElementById('sentinel-box').className = "p-3 rounded-xl bg-emerald-950/20 border border-brand-accent/20 text-[11px] text-slate-300 flex items-center space-x-2";
+                document.getElementById('sentinel-box').innerHTML = `
+                    <span class="relative flex h-2 w-2">
+                      <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-brand-accent opacity-75"></span>
+                      <span class="relative inline-flex rounded-full h-2 w-2 bg-brand-accent"></span>
+                    </span>
+                    <span>哨兵：监听已部署，等待敏感事件。</span>
+                `;
+            } else {
+                document.getElementById('mode-sentinel').className = `px-3 py-1.5 rounded-lg font-bold transition-all duration-200 ${inactiveClass}`;
+                document.getElementById('mode-trigger').className = `px-3 py-1.5 rounded-lg font-bold transition-all duration-200 ${activeClass}`;
+                document.getElementById('sentinel-box').className = "p-3 rounded-xl bg-brand-purple/10 border border-brand-purple/20 text-[11px] text-slate-300 flex items-center space-x-2";
+                document.getElementById('sentinel-box').innerHTML = `
+                    <i class="fa-solid fa-microphone text-brand-purple animate-pulse"></i>
+                    <span>随时通过语音大声唤醒“老白”。</span>
+                `;
+            }
+        }
+
+        function nextStep() {
+            if (currentStep < 4) {
+                currentStep++;
+                updateDemoSandbox();
+            }
+        }
+
+        function prevStep() {
+            if (currentStep > 0) {
+                currentStep--;
+                updateDemoSandbox();
+            }
+        }
+
+        function updateDemoSandbox() {
+            const data = scenarios[selectedScenario];
+            
+            // 1. 更新场景选择按钮样式
+            for (let i = 0; i < 4; i++) {
+                const btn = document.getElementById(`scen-btn-${i}`);
+                if (i === selectedScenario) {
+                    btn.className = "w-full text-left p-2.5 rounded-xl border transition-all duration-150 flex items-center space-x-3 bg-brand-accent/10 border-brand-accent/30";
+                } else {
+                    btn.className = "w-full text-left p-2.5 rounded-xl border transition-all duration-150 flex items-center space-x-3 border-white/5 hover:bg-white/5";
+                }
+            }
+
+            // 2. 更新仿真视图
+            document.getElementById('device-title').innerText = data.title;
+            document.getElementById('device-tag').innerText = data.tag;
+            if (data.tag.includes("Mobile")) {
+                document.getElementById('device-tag').className = "text-[9px] font-bold px-1.5 py-0.5 rounded uppercase bg-sky-500/20 text-sky-400";
+            } else {
+                document.getElementById('device-tag').className = "text-[9px] font-bold px-1.5 py-0.5 rounded uppercase bg-brand-accent/20 text-brand-accent";
+            }
+            document.getElementById('device-container').innerHTML = data.renderUI;
+
+            // 3. 声导播报更新
+            document.getElementById('tts-output').innerText = data.tts;
+
+            // 4. 更新时序指示器高亮
+            for (let i = 0; i < 5; i++) {
+                const indicator = document.getElementById(`step-i-${i}`);
+                if (i === currentStep) {
+                    indicator.className = "py-1 rounded bg-brand-accent text-brand-bg font-extrabold shadow-md shadow-brand-accent/30";
+                } else if (i < currentStep) {
+                    indicator.className = "py-1 rounded bg-slate-800 text-brand-accent";
+                } else {
+                    indicator.className = "py-1 rounded bg-slate-900 text-slate-600";
+                }
+            }
+
+            // 5. 更新右侧步骤详细内容
+            const stepDetail = data.steps[currentStep];
+            document.getElementById('step-detail-title').innerHTML = `
+                <i class="fa-solid fa-circle-check text-brand-accent mr-1.5"></i>
+                <span>${stepDetail.title}</span>
+            `;
+            document.getElementById('step-detail-body').innerText = stepDetail.body;
+            document.getElementById('step-payload').innerText = JSON.stringify(stepDetail.payload, null, 2);
+
+            // 6. 更新底部隐私安全核算表
+            const localList = document.getElementById('local-safe-list');
+            localList.innerHTML = '';
+            data.localSafe.forEach(item => {
+                localList.innerHTML += `<li>${item}</li>`;
+            });
+
+            const cloudList = document.getElementById('cloud-safe-list');
+            cloudList.innerHTML = '';
+            data.cloudSafe.forEach(item => {
+                cloudList.innerHTML += `<li>${item}</li>`;
+            });
+        }
+
+
+        // -------------------------
+        // 幻灯片基础翻页控制系统
+        // -------------------------
+        function updateSlide() {
+            // 隐藏所有 slide
+            document.querySelectorAll('.slide').forEach(s => s.classList.remove('active'));
+            // 显示当前 slide
+            const activeSlide = document.getElementById(`slide-${currentSlide}`);
+            if (activeSlide) {
+                activeSlide.classList.add('active');
+            }
+            
+            // 更新进度数字
+            document.getElementById('slide-index').innerText = `${currentSlide} / ${totalSlides}`;
+            
+            // 更新进度条
+            const progressPercent = (currentSlide / totalSlides) * 100;
+            document.getElementById('progress-bar').style.width = `${progressPercent}%`;
+
+            // 如果切换到沙盒演示页(Slide 6)，手动触发一次沙盒数据同步
+            if (currentSlide === 6) {
+                updateDemoSandbox();
+            }
+        }
+
+        function nextSlide() {
+            if (currentSlide < totalSlides) {
+                currentSlide++;
+                updateSlide();
+            }
+        }
+
+        function prevSlide() {
+            if (currentSlide > 1) {
+                currentSlide--;
+                updateSlide();
+            }
+        }
+
+        // 键盘左右键监听
+        document.addEventListener('keydown', function(event) {
+            // 仅在非沙盒演示页时支持左右方向键换页，防止沙盒里的步进冲突
+            if (currentSlide !== 6) {
+                if (event.key === 'ArrowRight' || event.key === ' ') {
+                    nextSlide();
+                } else if (event.key === 'ArrowLeft') {
+                    prevSlide();
+                }
+            } else {
+                // 在沙盒页面，左右方向键用于控制步骤的前进和后退，这非常便于路演录像！
+                if (event.key === 'ArrowRight') {
+                    nextStep();
+                } else if (event.key === 'ArrowLeft') {
+                    prevStep();
+                }
+            }
+        });
+
+        // 默认载入同步
+        window.onload = function() {
+            updateSlide();
+            updateDemoSandbox();
+        };
+    </script>
+</body>
+</html>
