@@ -202,11 +202,6 @@ fun ElvaVoiceScreen(
                         text = "尚未下载 AI 模型。",
                         containerColor = MaterialTheme.customColors.errorContainerColor,
                         contentColor = MaterialTheme.customColors.errorTextColor,
-                        action = {
-                            TextButton(onClick = onNavigateToModelManager) {
-                                Text("去下载")
-                            }
-                        },
                     )
                 }
                 ModelState.ERROR -> {

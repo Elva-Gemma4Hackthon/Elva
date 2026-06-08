@@ -55,6 +55,11 @@ class ElvaVoiceViewModel @Inject constructor(
 
     init {
         try {
+            if (!SpeechRecognizer.isRecognitionAvailable(context)) {
+                Log.w(TAG, "SpeechRecognizer service not available on this device")
+                _uiState.update { it.copy(responseText = "此设备不支持语音识别服务，请使用文字输入。") }
+                return
+            }
             speechRecognizer = SpeechRecognizer.createSpeechRecognizer(context)
             speechRecognizer?.setRecognitionListener(this)
             recognizerIntent = android.content.Intent(
@@ -65,8 +70,11 @@ class ElvaVoiceViewModel @Inject constructor(
                 putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 1)
                 putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, true)
             }
+            Log.d(TAG, "SpeechRecognizer initialized successfully")
         } catch (e: Exception) {
             Log.e(TAG, "Failed to initialize SpeechRecognizer", e)
+            speechRecognizer = null
+            _uiState.update { it.copy(responseText = "语音识别初始化失败，请检查设备语音服务。") }
         }
     }
 
@@ -103,6 +111,17 @@ class ElvaVoiceViewModel @Inject constructor(
         Log.d(TAG, "startListening: begin")
         // Stop TTS when user starts speaking
         com.elva.laobai.ElvaTtsManager.stop()
+        if (speechRecognizer == null) {
+            Log.w(TAG, "startListening: SpeechRecognizer not initialized")
+            _uiState.update {
+                it.copy(
+                    isListening = false,
+                    isThinking = false,
+                    responseText = "语音识别服务未就绪，请检查设备语音服务是否开启。",
+                )
+            }
+            return
+        }
         _uiState.update {
             it.copy(
                 isListening = true,
@@ -116,7 +135,7 @@ class ElvaVoiceViewModel @Inject constructor(
             Log.d(TAG, "startListening: SpeechRecognizer.startListening called")
         } catch (e: Exception) {
             Log.e(TAG, "Failed to start listening", e)
-            _uiState.update { it.copy(isListening = false) }
+            _uiState.update { it.copy(isListening = false, responseText = "语音识别启动失败，请重试。") }
         }
     }
 

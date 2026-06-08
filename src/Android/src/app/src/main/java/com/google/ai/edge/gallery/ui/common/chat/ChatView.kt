@@ -279,6 +279,7 @@ fun ChatView(
               modelManagerViewModel = modelManagerViewModel,
               inProgress = uiState.inProgress,
               modelPreparing = uiState.preparing,
+              hideModelSelector = true,
               shouldShowHistoryButton = true,
               onConfigChanged = { old, new ->
                 val filteredOld = old.toMutableMap()
