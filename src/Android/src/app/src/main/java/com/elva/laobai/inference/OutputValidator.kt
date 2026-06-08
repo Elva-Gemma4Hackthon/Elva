@@ -66,7 +66,7 @@ object OutputValidator {
      * Validate the parsed JSON and build a NextAction.
      */
     private fun validateAndBuildAction(json: JSONObject): NextAction? {
-        val functionName = json.optString("function", null) ?: return null
+        val functionName = json.optString("function").ifBlank { return null }
 
         // Look up function definition
         val funcDef = ElvaFunctions.getByName(functionName)
@@ -76,8 +76,8 @@ object OutputValidator {
         }
 
         val target = json.optString("target", "")
-        val value = json.optString("value", null)
-        val voice = json.optString("voice", null)
+        val value = json.optString("value").ifBlank { null }
+        val voice = json.optString("voice").ifBlank { null }
         val explanation = json.optString("explanation", "")
 
         // voice is required for all functions

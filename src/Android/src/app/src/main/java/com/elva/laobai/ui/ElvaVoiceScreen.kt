@@ -31,8 +31,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.automirrored.filled.VolumeUp
 import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material.icons.filled.VolumeUp
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -44,9 +44,8 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -62,6 +61,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
+import com.google.ai.edge.gallery.ui.theme.customColors
 
 /** Model initialization state for UI banner. */
 enum class ModelState { LOADING, READY, NOT_DOWNLOADED, ERROR }
@@ -131,329 +131,189 @@ fun ElvaVoiceScreen(
 
     Scaffold(
         topBar = {
-            TopAppBar(
+            CenterAlignedTopAppBar(
                 title = {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
                     ) {
                         Icon(
                             imageVector = Icons.Filled.Person,
-                            contentDescription = "Lao Bai",
-                            modifier = Modifier.size(32.dp),
-                            tint = MaterialTheme.colorScheme.primary,
+                            contentDescription = null,
+                            modifier = Modifier.size(20.dp),
+                            tint = MaterialTheme.colorScheme.onSurface,
                         )
-                        Spacer(modifier = Modifier.width(8.dp))
                         Text(
                             text = "老白",
-                            fontSize = 28.sp,
-                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurface,
+                            style = MaterialTheme.typography.titleMedium,
                         )
                     }
                 },
                 actions = {
                     IconButton(onClick = onToggleTts) {
                         Icon(
-                            imageVector = Icons.Filled.VolumeUp,
+                            imageVector = Icons.AutoMirrored.Filled.VolumeUp,
                             contentDescription = "Toggle voice",
                             tint = if (ttsEnabled)
-                                MaterialTheme.colorScheme.primary
+                                MaterialTheme.colorScheme.onSurface
                             else
-                                MaterialTheme.colorScheme.outline,
-                            modifier = Modifier.size(28.dp),
+                                MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                     }
                     IconButton(onClick = onSettingsClick) {
                         Icon(
                             imageVector = Icons.Filled.Settings,
                             contentDescription = "Settings",
-                            modifier = Modifier.size(28.dp),
+                            tint = MaterialTheme.colorScheme.onSurface,
                         )
                     }
                 },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.surface,
-                ),
             )
         }
     ) { paddingValues ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
+                .background(MaterialTheme.colorScheme.surfaceContainer)
                 .padding(paddingValues)
-                .padding(horizontal = 24.dp),
+                .padding(horizontal = 16.dp, vertical = 12.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.SpaceEvenly,
+            verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
             // ===== Status / Response Area =====
             // ===== Model Status Banner =====
             when (modelState) {
                 ModelState.LOADING -> {
-                    Card(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(bottom = 8.dp),
-                        shape = RoundedCornerShape(16.dp),
-                        colors = CardDefaults.cardColors(
-                            containerColor = Color(0xFFE3F2FD),
-                        ),
+                    StatusBanner(
+                        text = "AI 模型加载中，请稍候...",
+                        containerColor = MaterialTheme.colorScheme.secondaryContainer,
+                        contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
                     ) {
-                        Row(
-                            modifier = Modifier.padding(12.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                        ) {
-                            CircularProgressIndicator(
-                                modifier = Modifier.size(20.dp),
-                                strokeWidth = 2.dp,
-                                color = Color(0xFF1565C0),
-                            )
-                            Spacer(modifier = Modifier.width(12.dp))
-                            Text(
-                                text = "AI 模型加载中，请稍候...",
-                                fontSize = 16.sp,
-                                color = Color(0xFF1565C0),
-                            )
-                        }
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(18.dp),
+                            strokeWidth = 2.dp,
+                            color = MaterialTheme.colorScheme.onSecondaryContainer,
+                        )
                     }
                 }
                 ModelState.NOT_DOWNLOADED -> {
-                    Card(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(bottom = 8.dp),
-                        shape = RoundedCornerShape(16.dp),
-                        colors = CardDefaults.cardColors(
-                            containerColor = Color(0xFFFFEBEE),
-                        ),
-                    ) {
-                        Row(
-                            modifier = Modifier.padding(12.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                        ) {
-                            Text(
-                                text = "⚠️ 尚未下载 AI 模型。",
-                                fontSize = 16.sp,
-                                color = Color(0xFFC62828),
-                                modifier = Modifier.weight(1f),
-                            )
+                    StatusBanner(
+                        text = "尚未下载 AI 模型。",
+                        containerColor = MaterialTheme.customColors.errorContainerColor,
+                        contentColor = MaterialTheme.customColors.errorTextColor,
+                        action = {
                             TextButton(onClick = onNavigateToModelManager) {
-                                Text("去下载", color = Color(0xFFC62828))
+                                Text("去下载")
                             }
-                        }
-                    }
+                        },
+                    )
                 }
                 ModelState.ERROR -> {
-                    Card(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(bottom = 8.dp),
-                        shape = RoundedCornerShape(16.dp),
-                        colors = CardDefaults.cardColors(
-                            containerColor = Color(0xFFFFF8E1),
-                        ),
-                    ) {
-                        Column(
-                            modifier = Modifier.padding(12.dp),
-                            verticalArrangement = Arrangement.spacedBy(4.dp),
-                        ) {
-                            Text(
-                                text = "AI 模型加载失败，使用基础模式。",
-                                fontSize = 16.sp,
-                                color = Color(0xFFF57F17),
-                            )
-                            if (!modelErrorMessage.isNullOrBlank()) {
-                                Text(
-                                    text = modelErrorMessage,
-                                    fontSize = 14.sp,
-                                    color = Color(0xFF8D6E63),
-                                )
-                            }
-                        }
-                    }
+                    StatusBanner(
+                        text = "AI 模型加载失败，使用基础模式。",
+                        supportingText = modelErrorMessage,
+                        containerColor = MaterialTheme.customColors.warningContainerColor,
+                        contentColor = MaterialTheme.customColors.warningTextColor,
+                    )
                 }
                 ModelState.READY -> { /* No banner when model is ready */ }
             }
 
             // Accessibility service warning banner (Task 12)
             if (!isAccessibilityEnabled) {
-                Card(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(bottom = 8.dp),
-                    shape = RoundedCornerShape(16.dp),
-                    colors = CardDefaults.cardColors(
-                        containerColor = Color(0xFFFFF3E0),
-                    ),
-                ) {
-                    Row(
-                        modifier = Modifier.padding(12.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Text(
-                            text = "⚠️ 无障碍服务未开启，代操作等功能不可用。",
-                            fontSize = 16.sp,
-                            color = Color(0xFFE65100),
-                            modifier = Modifier.weight(1f),
-                        )
+                StatusBanner(
+                    text = "无障碍服务未开启，代操作等功能不可用。",
+                    containerColor = MaterialTheme.customColors.warningContainerColor,
+                    contentColor = MaterialTheme.customColors.warningTextColor,
+                    action = {
                         TextButton(onClick = onOpenAccessibilitySettings) {
-                            Text("去开启", color = Color(0xFFE65100))
+                            Text("去开启")
                         }
-                    }
-                }
+                    },
+                )
             }
 
             // Form filling progress bar (Case 1)
             if (isFormFilling && formTemplateName != null) {
-                Card(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(bottom = 8.dp),
-                    shape = RoundedCornerShape(16.dp),
-                    colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.primaryContainer,
-                    ),
-                ) {
-                    Column(
-                        modifier = Modifier.padding(16.dp),
-                    ) {
-                        Text(
-                            text = "📝 正在填写: $formTemplateName",
-                            fontSize = 18.sp,
-                            fontWeight = FontWeight.Medium,
-                            color = MaterialTheme.colorScheme.onPrimaryContainer,
-                        )
-                        if (formProgress != null) {
-                            Text(
-                                text = formProgress,
-                                fontSize = 16.sp,
-                                color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f),
-                            )
-                        }
-                    }
-                }
+                StatusBanner(
+                    text = "正在填写：$formTemplateName",
+                    supportingText = formProgress,
+                    containerColor = MaterialTheme.colorScheme.primaryContainer,
+                    contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                )
             }
 
             // Health consultation progress (Case 2)
             if (isHealthConsultation) {
-                Card(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(bottom = 8.dp),
-                    shape = RoundedCornerShape(16.dp),
-                    colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.tertiaryContainer,
-                    ),
-                ) {
-                    Column(
-                        modifier = Modifier.padding(16.dp),
-                    ) {
-                        Text(
-                            text = "🏥 健康咨询中",
-                            fontSize = 18.sp,
-                            fontWeight = FontWeight.Medium,
-                            color = MaterialTheme.colorScheme.onTertiaryContainer,
-                        )
-                        if (healthTriageStage != null) {
-                            Text(
-                                text = "阶段: $healthTriageStage",
-                                fontSize = 14.sp,
-                                color = MaterialTheme.colorScheme.onTertiaryContainer.copy(alpha = 0.7f),
-                            )
-                        }
-                    }
-                }
+                StatusBanner(
+                    text = "健康咨询中",
+                    supportingText = healthTriageStage?.let { "阶段：$it" },
+                    containerColor = MaterialTheme.colorScheme.tertiaryContainer,
+                    contentColor = MaterialTheme.colorScheme.onTertiaryContainer,
+                )
             }
 
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .weight(1f),
+                    .weight(1f)
+                    .padding(horizontal = 4.dp),
                 contentAlignment = Alignment.Center,
             ) {
                 when {
                     isExecuting && executionStatus != null -> {
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Text(
-                                text = executionStatus,
-                                fontSize = 24.sp,
-                                fontWeight = FontWeight.Medium,
-                                color = MaterialTheme.colorScheme.primary,
-                                textAlign = TextAlign.Center,
-                            )
-                        }
+                        Text(
+                            text = executionStatus,
+                            style = MaterialTheme.typography.headlineSmall,
+                            color = MaterialTheme.colorScheme.onSurface,
+                            textAlign = TextAlign.Center,
+                        )
                     }
                     isThinking -> {
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
                             Text(
                                 text = "老白在想想...",
-                                fontSize = 28.sp,
-                                fontWeight = FontWeight.Medium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                style = MaterialTheme.typography.headlineSmall,
+                                color = MaterialTheme.colorScheme.onSurface,
                                 textAlign = TextAlign.Center,
                             )
-                            Spacer(modifier = Modifier.height(12.dp))
+                            Spacer(modifier = Modifier.height(8.dp))
                             Text(
                                 text = "Lao Bai is thinking...",
-                                fontSize = 20.sp,
-                                color = MaterialTheme.colorScheme.outline,
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 textAlign = TextAlign.Center,
                             )
                         }
                     }
                     responseText.isNotEmpty() -> {
-                        Card(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(8.dp),
-                            shape = RoundedCornerShape(24.dp),
-                            colors = CardDefaults.cardColors(
-                                containerColor = MaterialTheme.colorScheme.secondaryContainer,
-                            ),
-                        ) {
-                            Text(
-                                text = responseText,
-                                fontSize = 26.sp,
-                                lineHeight = 36.sp,
-                                modifier = Modifier.padding(24.dp),
-                                textAlign = TextAlign.Center,
-                                fontWeight = FontWeight.Medium,
-                                color = MaterialTheme.colorScheme.onSecondaryContainer,
-                            )
-                        }
+                        ResponseCard(
+                            text = responseText,
+                            containerColor = MaterialTheme.colorScheme.secondaryContainer,
+                            contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
+                        )
                     }
                     recognizedText.isNotEmpty() -> {
-                        Card(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(8.dp),
-                            shape = RoundedCornerShape(24.dp),
-                            colors = CardDefaults.cardColors(
-                                containerColor = MaterialTheme.colorScheme.primaryContainer,
-                            ),
-                        ) {
-                            Text(
-                                text = "\"$recognizedText\"",
-                                fontSize = 26.sp,
-                                lineHeight = 36.sp,
-                                modifier = Modifier.padding(24.dp),
-                                textAlign = TextAlign.Center,
-                                color = MaterialTheme.colorScheme.onPrimaryContainer,
-                            )
-                        }
+                        ResponseCard(
+                            text = "\"$recognizedText\"",
+                            containerColor = MaterialTheme.colorScheme.primaryContainer,
+                            contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                        )
                     }
                     else -> {
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
                             Text(
                                 text = "按下按钮，跟老白说话",
-                                fontSize = 28.sp,
-                                fontWeight = FontWeight.Medium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                style = MaterialTheme.typography.headlineSmall,
+                                color = MaterialTheme.colorScheme.onSurface,
                                 textAlign = TextAlign.Center,
                             )
                             Spacer(modifier = Modifier.height(8.dp))
                             Text(
                                 text = "Tap the button to talk to Lao Bai",
-                                fontSize = 20.sp,
-                                color = MaterialTheme.colorScheme.outline,
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 textAlign = TextAlign.Center,
                             )
                         }
@@ -461,56 +321,69 @@ fun ElvaVoiceScreen(
                 }
             }
 
-            // ===== Big Mic Button =====
-            Box(contentAlignment = Alignment.Center) {
-                // Pulse ring when listening
-                if (isListening) {
-                    Box(
-                        modifier = Modifier
-                            .size(180.dp * pulseScale)
-                            .background(
-                                color = MaterialTheme.colorScheme.primary.copy(alpha = 0.15f),
-                                shape = CircleShape,
-                            )
-                    )
-                }
-                IconButton(
-                    onClick = {
-                        if (audioPermissionGranted) {
-                            onMicClick()
-                        } else {
-                            audioPermissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
-                        }
-                    },
-                    modifier = Modifier.size(160.dp),
-                    colors = IconButtonDefaults.iconButtonColors(
-                        containerColor = if (isListening)
-                            MaterialTheme.colorScheme.error
-                        else
-                            MaterialTheme.colorScheme.primary,
-                    ),
-                    shape = CircleShape,
+            Surface(
+                shape = RoundedCornerShape(24.dp),
+                color = MaterialTheme.colorScheme.surface,
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Column(
+                    modifier = Modifier.padding(horizontal = 20.dp, vertical = 16.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(12.dp),
                 ) {
-                    Icon(
-                        imageVector = Icons.Filled.Mic,
-                        contentDescription = "Press to speak",
-                        modifier = Modifier.size(72.dp),
-                        tint = Color.White,
+                    Box(contentAlignment = Alignment.Center) {
+                        if (isListening) {
+                            Box(
+                                modifier = Modifier
+                                    .size(168.dp * pulseScale)
+                                    .background(
+                                        color = MaterialTheme.colorScheme.primary.copy(alpha = 0.10f),
+                                        shape = CircleShape,
+                                    )
+                            )
+                        }
+                        IconButton(
+                            onClick = {
+                                if (audioPermissionGranted) {
+                                    onMicClick()
+                                } else {
+                                    audioPermissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
+                                }
+                            },
+                            modifier = Modifier.size(128.dp),
+                            colors = IconButtonDefaults.iconButtonColors(
+                                containerColor = if (isListening)
+                                    MaterialTheme.customColors.recordButtonBgColor
+                                else
+                                    MaterialTheme.colorScheme.primary,
+                            ),
+                            shape = CircleShape,
+                        ) {
+                            Icon(
+                                imageVector = Icons.Filled.Mic,
+                                contentDescription = "Press to speak",
+                                modifier = Modifier.size(52.dp),
+                                tint = Color.White,
+                            )
+                        }
+                    }
+
+                    Text(
+                        text = if (isListening) "正在听您说话..." else "按下说话",
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        textAlign = TextAlign.Center,
                     )
                 }
             }
 
-            // ===== Hint Text =====
             Text(
-                text = if (isListening) "正在听您说话..." else "按下说话",
-                fontSize = 22.sp,
-                color = MaterialTheme.colorScheme.outline,
-                textAlign = TextAlign.Center,
-                modifier = Modifier.padding(vertical = 16.dp),
+                text = "常用操作",
+                style = MaterialTheme.typography.labelLarge,
+                color = MaterialTheme.colorScheme.onSurface,
+                modifier = Modifier.fillMaxWidth().padding(top = 2.dp),
             )
 
-            // ===== Quick Action Chips =====
-            // Grid layout: 3 columns, equal-width chips for tidy alignment.
             val chips = listOf(
                 "\uD83C\uDFE5 我不舒服" to "小白，我不舒服",
                 "\uD83D\uDCCB 帮我填表" to "帮我填表",
@@ -520,12 +393,13 @@ fun ElvaVoiceScreen(
                 "\uD83D\uDD52 现在几点" to "现在几点",
             )
             val columns = 3
-            chips.chunked(columns).forEachIndexed { rowIndex, row ->
+            val chipRows = chips.chunked(columns)
+            chipRows.forEachIndexed { rowIndex, row ->
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(
-                            bottom = if (rowIndex == chips.chunked(columns).lastIndex) 24.dp else 8.dp
+                            bottom = if (rowIndex == chipRows.lastIndex) 24.dp else 8.dp
                         ),
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
@@ -554,21 +428,86 @@ private fun QuickChip(
 ) {
     Surface(
         onClick = onClick,
-        shape = RoundedCornerShape(50),
-        color = MaterialTheme.colorScheme.tertiaryContainer,
+        shape = RoundedCornerShape(14.dp),
+        color = MaterialTheme.colorScheme.surfaceContainerLow,
         modifier = modifier,
     ) {
         Box(
-            modifier = Modifier.padding(vertical = 10.dp),
+            modifier = Modifier.padding(horizontal = 10.dp, vertical = 10.dp),
             contentAlignment = Alignment.Center,
         ) {
             Text(
                 text = label,
-                fontSize = 16.sp,
+                style = MaterialTheme.typography.bodySmall,
                 fontWeight = FontWeight.Medium,
                 textAlign = TextAlign.Center,
-                color = MaterialTheme.colorScheme.onTertiaryContainer,
+                color = MaterialTheme.colorScheme.onSurface,
             )
         }
+    }
+}
+
+@Composable
+private fun StatusBanner(
+    text: String,
+    containerColor: Color,
+    contentColor: Color,
+    supportingText: String? = null,
+    action: (@Composable () -> Unit)? = null,
+    leading: (@Composable () -> Unit)? = null,
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(12.dp),
+        colors = CardDefaults.cardColors(containerColor = containerColor),
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            if (leading != null) {
+                leading()
+            }
+            Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                Text(
+                    text = text,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = contentColor,
+                    fontWeight = FontWeight.Medium,
+                )
+                if (!supportingText.isNullOrBlank()) {
+                    Text(
+                        text = supportingText,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = contentColor.copy(alpha = 0.8f),
+                    )
+                }
+            }
+            if (action != null) {
+                action()
+            }
+        }
+    }
+}
+
+@Composable
+private fun ResponseCard(
+    text: String,
+    containerColor: Color,
+    contentColor: Color,
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(20.dp),
+        colors = CardDefaults.cardColors(containerColor = containerColor),
+    ) {
+        Text(
+            text = text,
+            style = MaterialTheme.typography.headlineSmall,
+            modifier = Modifier.padding(horizontal = 20.dp, vertical = 24.dp),
+            textAlign = TextAlign.Center,
+            color = contentColor,
+        )
     }
 }

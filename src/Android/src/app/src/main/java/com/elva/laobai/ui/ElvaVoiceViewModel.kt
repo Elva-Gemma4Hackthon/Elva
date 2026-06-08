@@ -562,14 +562,14 @@ class ElvaVoiceViewModel @Inject constructor(
             var consecutiveErrors = 0
             while (consecutiveErrors < 3) {
                 val currentState = com.elva.laobai.forms.FormFillEngine.getFillState()
-                if (currentState == null || currentState.filledFields >= currentState.totalFields) {
+                if (currentState.filledFields >= currentState.totalFields) {
                     // All fields filled
-                    val templateName = currentState?.templateName ?: "表单"
+                    val templateName = currentState.templateName ?: "表单"
                     val doneMsg = "${templateName}填写完成了！您检查一下看看对不对~"
                     _uiState.update {
                         it.copy(
                             isFormFilling = false,
-                            formProgress = "${currentState?.filledFields ?: 0}/${currentState?.totalFields ?: 0} 已填写",
+                            formProgress = "${currentState.filledFields}/${currentState.totalFields} 已填写",
                             responseText = doneMsg,
                         )
                     }
@@ -635,41 +635,38 @@ class ElvaVoiceViewModel @Inject constructor(
 
     /**
      * Trigger hospital booking after health consultation cloud planning.
-     * Uses the book_hospital skill with parameters from the cloud planner.
+     * Uses the fixed demo accessibility task path for Case 2.
      */
     private fun triggerBookHospital(params: Map<String, String>) {
         viewModelScope.launch {
-            kotlinx.coroutines.delay(1500) // Brief pause after speaking the recommendation
-            com.elva.laobai.executor.SkillExecutor.executeSkill(
-                skillId = "book_hospital",
+            kotlinx.coroutines.delay(1500)
+            _uiState.update {
+                it.copy(
+                    isExecuting = true,
+                    executionStatus = "正在打开挂号流程...",
+                )
+            }
+            com.elva.laobai.accessibility.A11yTaskExecutor.execute(
+                taskType = com.elva.laobai.accessibility.A11yTaskExecutor.TaskType.BOOK_HOSPITAL,
                 params = params,
                 context = context,
-                onProgress = { current, total, msg ->
-                    _uiState.update {
-                        it.copy(
-                            isExecuting = true,
-                            executionStatus = "挂号中 ($current/$total): $msg",
-                        )
-                    }
-                },
-                onComplete = { result ->
-                    val msg = if (result.success) {
-                        "挂号流程完成！"
-                    } else {
-                        "挂号未成功: ${result.message}"
-                    }
-                    _uiState.update {
-                        it.copy(
-                            isExecuting = false,
-                            executionStatus = msg,
-                            responseText = msg,
-                        )
-                    }
-                    if (_uiState.value.ttsEnabled) {
-                        com.elva.laobai.ElvaTtsManager.speak(msg)
-                    }
-                },
-            )
+            ) { success, message ->
+                val msg = if (success) {
+                    "已进入挂号流程，请您在最终确认挂号前自己检查并确认。"
+                } else {
+                    "挂号未成功: $message"
+                }
+                _uiState.update {
+                    it.copy(
+                        isExecuting = false,
+                        executionStatus = msg,
+                        responseText = msg,
+                    )
+                }
+                if (_uiState.value.ttsEnabled) {
+                    com.elva.laobai.ElvaTtsManager.speak(msg)
+                }
+            }
         }
     }
 

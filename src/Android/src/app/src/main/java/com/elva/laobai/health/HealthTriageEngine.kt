@@ -34,6 +34,10 @@ import java.util.UUID
 object HealthTriageEngine {
     private const val TAG = "HealthTriage"
 
+    private fun logDebug(message: String) {
+        runCatching { Log.d(TAG, message) }
+    }
+
     /** Consultation stages. */
     enum class Stage {
         /** User just started — extract initial symptoms. */
@@ -123,7 +127,7 @@ object HealthTriageEngine {
             stage = if (riskFlags.isNotEmpty()) Stage.RISK_PROMPT else Stage.SYMPTOM_CLARIFICATION,
         )
 
-        Log.d(TAG, "Consultation started: symptoms=$symptoms, riskFlags=$riskFlags")
+        logDebug("Consultation started: symptoms=$symptoms, riskFlags=$riskFlags")
 
         return if (riskFlags.isNotEmpty()) {
             buildRiskPrompt()
@@ -141,7 +145,7 @@ object HealthTriageEngine {
     fun processUserResponse(userText: String): NextAction {
         val currentStage = consultationState.stage
 
-        Log.d(TAG, "Processing response at stage=$currentStage: $userText")
+        logDebug("Processing response at stage=$currentStage: $userText")
 
         return when (currentStage) {
             Stage.SYMPTOM_CLARIFICATION -> {

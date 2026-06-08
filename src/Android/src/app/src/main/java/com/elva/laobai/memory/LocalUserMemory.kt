@@ -1,3 +1,5 @@
+@file:Suppress("DEPRECATION")
+
 /*
  * Copyright 2026 Elva LaoBai Contributors
  * Licensed under the Apache License, Version 2.0.

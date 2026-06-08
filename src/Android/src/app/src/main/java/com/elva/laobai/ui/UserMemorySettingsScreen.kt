@@ -4,6 +4,7 @@
  */
 package com.elva.laobai.ui
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -15,8 +16,11 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material3.Button
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -25,7 +29,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -99,20 +102,20 @@ fun UserMemorySettingsScreen(
 
     Scaffold(
         topBar = {
-            TopAppBar(
+            CenterAlignedTopAppBar(
                 title = {
                     Text(
                         text = "个人信息",
-                        fontSize = 24.sp,
-                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        style = MaterialTheme.typography.titleMedium,
                     )
                 },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                            imageVector = Icons.AutoMirrored.Rounded.ArrowBack,
                             contentDescription = "返回",
-                            modifier = Modifier.padding(8.dp),
+                            tint = MaterialTheme.colorScheme.onSurface,
                         )
                     }
                 },
@@ -122,142 +125,135 @@ fun UserMemorySettingsScreen(
         Column(
             modifier = Modifier
                 .fillMaxSize()
+                .background(MaterialTheme.colorScheme.surfaceContainer)
                 .padding(paddingValues)
-                .padding(horizontal = 24.dp, vertical = 8.dp)
+                .padding(horizontal = 16.dp, vertical = 16.dp)
                 .verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            Text(
-                text = "填写后老白可以帮您自动填表、推荐科室。",
-                fontSize = 18.sp,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-
-            // Display Name
-            MemoryFieldRow(
-                label = "您的名字",
-                value = displayName,
-                onValueChange = { displayName = it },
-                authorized = authDisplayName,
-                onAuthChange = { authDisplayName = it },
-            )
-
-            // Phone
-            MemoryFieldRow(
-                label = "手机号码",
-                value = phone,
-                onValueChange = { phone = it },
-                authorized = authPhone,
-                onAuthChange = { authPhone = it },
-            )
-
-            // Address
-            MemoryFieldRow(
-                label = "家庭地址",
-                value = address,
-                onValueChange = { address = it },
-                authorized = authAddress,
-                onAuthChange = { authAddress = it },
-            )
-
-            // Emergency Contact
-            MemoryFieldRow(
-                label = "紧急联系人",
-                value = emergencyContact,
-                onValueChange = { emergencyContact = it },
-                authorized = authEmergencyContact,
-                onAuthChange = { authEmergencyContact = it },
-            )
-
-            // Medical Card
-            MemoryFieldRow(
-                label = "医保卡号",
-                value = medicalCard,
-                onValueChange = { medicalCard = it },
-                authorized = authMedicalCard,
-                onAuthChange = { authMedicalCard = it },
-            )
-
-            Spacer(modifier = Modifier.height(8.dp))
-            Text(
-                text = "看病挂号偏好",
-                fontSize = 20.sp,
-                fontWeight = FontWeight.Bold,
-            )
-
-            // Preferred Hospital
-            MemoryFieldRow(
-                label = "首选医院",
-                value = preferredHospital,
-                onValueChange = { preferredHospital = it },
-                authorized = authHospital,
-                onAuthChange = { authHospital = it },
-            )
-
-            // Preferred Department
-            MemoryFieldRow(
-                label = "常去科室",
-                value = preferredDepartment,
-                onValueChange = { preferredDepartment = it },
-                authorized = authDepartment,
-                onAuthChange = { authDepartment = it },
-            )
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            // Save button
-            Button(
-                onClick = {
-                    isSaving = true
-                    saveSuccess = false
-                    val K = LocalUserMemory.FieldKeys
-                    val fields = mutableMapOf<String, String>()
-                    val authorizations = mutableMapOf<String, Boolean>()
-
-                    fun addField(key: String, value: String, auth: Boolean) {
-                        if (value.isNotBlank()) {
-                            fields[key] = value
-                            authorizations[key] = auth
-                        }
-                    }
-
-                    addField(K.DISPLAY_NAME, displayName, authDisplayName)
-                    addField(K.PHONE_MASKED, phone, authPhone)
-                    addField(K.ADDRESS_LABEL, address, authAddress)
-                    addField(K.EMERGENCY_CONTACT_LABEL, emergencyContact, authEmergencyContact)
-                    addField(K.MEDICAL_CARD_LABEL, medicalCard, authMedicalCard)
-                    addField(K.PREFERRED_HOSPITAL, preferredHospital, authHospital)
-                    addField(K.PREFERRED_DEPARTMENT, preferredDepartment, authDepartment)
-
-                    scope.launch {
-                        LocalUserMemory.setFields(fields)
-                        for ((key, auth) in authorizations) {
-                            if (auth) LocalUserMemory.authorizeField(key)
-                            else LocalUserMemory.revokeField(key)
-                        }
-                        isSaving = false
-                        saveSuccess = true
-                    }
-                },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(56.dp),
-                enabled = !isSaving,
-            ) {
+            SectionCard {
                 Text(
-                    text = if (isSaving) "保存中..." else if (saveSuccess) "已保存!" else "保存信息",
-                    fontSize = 20.sp,
+                    text = "填写后老白可以帮您自动填表、推荐科室。",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
 
-            Text(
-                text = "所有信息都加密保存在您的手机上，不会上传到云端。",
-                fontSize = 14.sp,
-                color = MaterialTheme.colorScheme.outline,
-                modifier = Modifier.padding(vertical = 8.dp),
-            )
+            SectionCard(
+                title = "基础信息",
+                subtitle = "只在你授权后，老白才会在相关场景中使用这些信息。",
+            ) {
+                MemoryFieldRow(
+                    label = "您的名字",
+                    value = displayName,
+                    onValueChange = { displayName = it },
+                    authorized = authDisplayName,
+                    onAuthChange = { authDisplayName = it },
+                )
+                MemoryFieldRow(
+                    label = "手机号码",
+                    value = phone,
+                    onValueChange = { phone = it },
+                    authorized = authPhone,
+                    onAuthChange = { authPhone = it },
+                )
+                MemoryFieldRow(
+                    label = "家庭地址",
+                    value = address,
+                    onValueChange = { address = it },
+                    authorized = authAddress,
+                    onAuthChange = { authAddress = it },
+                )
+                MemoryFieldRow(
+                    label = "紧急联系人",
+                    value = emergencyContact,
+                    onValueChange = { emergencyContact = it },
+                    authorized = authEmergencyContact,
+                    onAuthChange = { authEmergencyContact = it },
+                )
+                MemoryFieldRow(
+                    label = "医保卡号",
+                    value = medicalCard,
+                    onValueChange = { medicalCard = it },
+                    authorized = authMedicalCard,
+                    onAuthChange = { authMedicalCard = it },
+                )
+            }
 
-            Spacer(modifier = Modifier.height(32.dp))
+            SectionCard(title = "看病挂号偏好") {
+                MemoryFieldRow(
+                    label = "首选医院",
+                    value = preferredHospital,
+                    onValueChange = { preferredHospital = it },
+                    authorized = authHospital,
+                    onAuthChange = { authHospital = it },
+                )
+                MemoryFieldRow(
+                    label = "常去科室",
+                    value = preferredDepartment,
+                    onValueChange = { preferredDepartment = it },
+                    authorized = authDepartment,
+                    onAuthChange = { authDepartment = it },
+                )
+            }
+
+            Spacer(modifier = Modifier.height(4.dp))
+
+            SectionCard {
+                Button(
+                    onClick = {
+                        isSaving = true
+                        saveSuccess = false
+                        val K = LocalUserMemory.FieldKeys
+                        val fields = mutableMapOf<String, String>()
+                        val authorizations = mutableMapOf<String, Boolean>()
+
+                        fun addField(key: String, value: String, auth: Boolean) {
+                            if (value.isNotBlank()) {
+                                fields[key] = value
+                                authorizations[key] = auth
+                            }
+                        }
+
+                        addField(K.DISPLAY_NAME, displayName, authDisplayName)
+                        addField(K.PHONE_MASKED, phone, authPhone)
+                        addField(K.ADDRESS_LABEL, address, authAddress)
+                        addField(K.EMERGENCY_CONTACT_LABEL, emergencyContact, authEmergencyContact)
+                        addField(K.MEDICAL_CARD_LABEL, medicalCard, authMedicalCard)
+                        addField(K.PREFERRED_HOSPITAL, preferredHospital, authHospital)
+                        addField(K.PREFERRED_DEPARTMENT, preferredDepartment, authDepartment)
+
+                        scope.launch {
+                            LocalUserMemory.setFields(fields)
+                            for ((key, auth) in authorizations) {
+                                if (auth) LocalUserMemory.authorizeField(key)
+                                else LocalUserMemory.revokeField(key)
+                            }
+                            isSaving = false
+                            saveSuccess = true
+                        }
+                    },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(52.dp),
+                    enabled = !isSaving,
+                ) {
+                    Text(
+                        text = if (isSaving) "保存中..." else if (saveSuccess) "已保存" else "保存信息",
+                        style = MaterialTheme.typography.bodyLarge,
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                Text(
+                    text = "所有信息都加密保存在您的手机上，不会上传到云端。",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+
+            Spacer(modifier = Modifier.height(24.dp))
         }
     }
 }
@@ -270,18 +266,18 @@ private fun MemoryFieldRow(
     authorized: Boolean,
     onAuthChange: (Boolean) -> Unit,
 ) {
-    Column {
+    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
         OutlinedTextField(
             value = value,
             onValueChange = onValueChange,
-            label = { Text(text = label, fontSize = 18.sp) },
+            label = { Text(text = label, style = MaterialTheme.typography.bodyMedium) },
             modifier = Modifier.fillMaxWidth(),
-            textStyle = MaterialTheme.typography.bodyLarge.copy(fontSize = 20.sp),
+            textStyle = MaterialTheme.typography.bodyLarge,
             singleLine = true,
         )
         Row(
             verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.padding(start = 4.dp),
+            modifier = Modifier.padding(start = 2.dp),
         ) {
             Checkbox(
                 checked = authorized,
@@ -289,9 +285,43 @@ private fun MemoryFieldRow(
             )
             Text(
                 text = "允许老白使用此信息帮您填表",
-                fontSize = 14.sp,
+                style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
+        }
+    }
+}
+
+@Composable
+private fun SectionCard(
+    title: String? = null,
+    subtitle: String? = null,
+    content: @Composable () -> Unit,
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            if (title != null) {
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    fontWeight = FontWeight.Medium,
+                )
+            }
+            if (subtitle != null) {
+                Text(
+                    text = subtitle,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            content()
         }
     }
 }

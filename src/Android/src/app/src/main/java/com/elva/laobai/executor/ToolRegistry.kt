@@ -38,6 +38,14 @@ object ToolRegistry {
     init {
         // Register built-in tools
         register(ToolDef(
+            name = "emergency_stop",
+            actionType = ActionType.EMERGENCY_STOP,
+            riskLevel = RiskLevel.HIGH,
+            requiresPreCheck = false,
+            requiresPostCheck = false,
+            description = "Stop automation and warn the user",
+        ))
+        register(ToolDef(
             name = "click_element",
             actionType = ActionType.CLICK_ELEMENT,
             riskLevel = RiskLevel.MEDIUM,
@@ -101,6 +109,22 @@ object ToolRegistry {
             requiresPostCheck = false,
             description = "Speak a message via TTS",
         ))
+        register(ToolDef(
+            name = "ask_confirmation",
+            actionType = ActionType.ASK_CONFIRMATION,
+            riskLevel = RiskLevel.HIGH,
+            requiresPreCheck = false,
+            requiresPostCheck = false,
+            description = "Ask the user to manually confirm before continuing",
+        ))
+        register(ToolDef(
+            name = "generate_summary",
+            actionType = ActionType.GENERATE_SUMMARY,
+            riskLevel = RiskLevel.MEDIUM,
+            requiresPreCheck = true,
+            requiresPostCheck = false,
+            description = "Generate a local summary",
+        ))
     }
 
     /**
@@ -150,15 +174,15 @@ object ToolRegistry {
      * Validate that a NextAction is allowed by the tool registry.
      */
     fun validateAction(action: NextAction): ValidationResult {
-        val tool = tools[action.action] ?: return ValidationResult(
-            allowed = false,
-            reason = "Action type ${action.action} is not in the whitelist",
-        )
-
         // Emergency stop is always allowed
         if (action.action == ActionType.EMERGENCY_STOP) {
             return ValidationResult(allowed = true, reason = "Emergency stop always allowed")
         }
+
+        val tool = tools[action.action] ?: return ValidationResult(
+            allowed = false,
+            reason = "Action type ${action.action} is not in the whitelist",
+        )
 
         // Check risk level alignment
         if (action.riskLevel.ordinal > tool.riskLevel.ordinal) {

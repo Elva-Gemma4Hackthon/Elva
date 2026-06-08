@@ -249,7 +249,7 @@ object HealthCloudPlanner {
                 CloudPlannerResponse(
                     decision = json.optString("decision", "plan"),
                     reason = json.optString("reason", ""),
-                    recommendedDepartment = json.optString("recommended_department", null),
+                    recommendedDepartment = json.optString("recommended_department").ifBlank { null },
                     task = CloudTask(
                         intent = "book_hospital",
                         parameters = mapOf(

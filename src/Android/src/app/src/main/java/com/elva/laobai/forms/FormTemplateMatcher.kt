@@ -29,6 +29,10 @@ import com.elva.laobai.models.UIElement
 object FormTemplateMatcher {
     private const val TAG = "FormMatcher"
 
+    private fun logDebug(message: String) {
+        runCatching { Log.d(TAG, message) }
+    }
+
     /** Minimum keyword match ratio for a positive match. */
     private const val MIN_KEYWORD_RATIO = 0.3f
 
@@ -44,7 +48,7 @@ object FormTemplateMatcher {
     init {
         // Register V1 built-in templates
         templates.addAll(FormTemplates.ALL_TEMPLATES)
-        Log.d(TAG, "Registered ${templates.size} form templates")
+        logDebug("Registered ${templates.size} form templates")
     }
 
     /**
@@ -56,7 +60,7 @@ object FormTemplateMatcher {
     fun match(observation: ScreenObservation): FormTemplateMatch {
         // Quick filter: only consider form-type pages
         if (observation.pageType != "form") {
-            Log.d(TAG, "Page type is ${observation.pageType}, not 'form' — skipping")
+            logDebug("Page type is ${observation.pageType}, not 'form' — skipping")
             return FormTemplateMatch(matched = false)
         }
 
@@ -76,10 +80,11 @@ object FormTemplateMatcher {
         }
 
         if (bestMatch.matched) {
-            Log.d(TAG, "Matched template: ${bestMatch.template?.templateId} " +
-                "confidence=${bestMatch.confidence}")
+            logDebug(
+                "Matched template: ${bestMatch.template?.templateId} confidence=${bestMatch.confidence}",
+            )
         } else {
-            Log.d(TAG, "No template matched for current page")
+            logDebug("No template matched for current page")
         }
 
         return bestMatch
@@ -155,6 +160,6 @@ object FormTemplateMatcher {
      */
     fun registerTemplate(template: FormTemplate) {
         templates.add(template)
-        Log.d(TAG, "Dynamically registered template: ${template.templateId}")
+        logDebug("Dynamically registered template: ${template.templateId}")
     }
 }
