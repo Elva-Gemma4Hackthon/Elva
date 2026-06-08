@@ -640,7 +640,7 @@ constructor(
         BuiltInTaskId.LLM_MOBILE_ACTIONS,
         BuiltInTaskId.LLM_AGENT_CHAT,
       )
-    for (task in getTasksByIds(ids = setOfTasks)) {
+    for (task in getActiveCustomTasks().map { it.task }.filter { setOfTasks.contains(it.id) }) {
       // Remove duplicated imported model if existed.
       val modelIndex = task.models.indexOfFirst { info.fileName == it.name && it.imported }
       if (modelIndex >= 0) {
@@ -680,10 +680,12 @@ constructor(
     modelInstances[model.name] =
       ModelInitializationStatus(status = ModelInitializationStatusType.NOT_INITIALIZED)
 
-    // Update ui state.
+    // Update ui state. Always sync tasks from customTasks — uiState.tasks may still be
+    // empty when the remote allowlist has not loaded yet.
     _uiState.update {
       it.copy(
-        tasks = it.tasks.toList(),
+        tasks = getActiveCustomTasks().map { customTask -> customTask.task }.toList(),
+        tasksByCategory = groupTasksByCategory(),
         modelDownloadStatus = modelDownloadStatus,
         modelInitializationStatus = modelInstances,
         modelImportingUpdateTrigger = System.currentTimeMillis(),
@@ -922,6 +924,11 @@ constructor(
         }
 
         if (modelAllowlist == null) {
+          Log.d(TAG, "Trying to load bundled model allowlist from assets.")
+          modelAllowlist = readModelAllowlistFromAssets()
+        }
+
+        if (modelAllowlist == null) {
           // Load from github.
           var version = BuildConfig.VERSION_NAME.replace(".", "_")
           val url = getAllowlistUrl(version)
@@ -939,7 +946,18 @@ constructor(
         }
 
         if (modelAllowlist == null) {
-          _uiState.update { it.copy(loadingModelAllowlistError = "Failed to load model list") }
+          Log.w(TAG, "Model allowlist unavailable; bootstrapping imported models only.")
+          val curTasks = getActiveCustomTasks().map { it.task }
+          processTasks()
+          _uiState.update {
+            createUiState()
+              .copy(
+                loadingModelAllowlist = false,
+                loadingModelAllowlistError = "Failed to load model list",
+                tasks = curTasks,
+                tasksByCategory = groupTasksByCategory(),
+              )
+          }
           return@launch
         }
 
@@ -1065,6 +1083,20 @@ constructor(
       Log.d(TAG, "Done: saving model allowlist to disk.")
     } catch (e: Exception) {
       Log.e(TAG, "failed to write model allowlist to disk", e)
+    }
+  }
+
+  private fun readModelAllowlistFromAssets(): ModelAllowlist? {
+    try {
+      Log.d(TAG, "Reading bundled model allowlist from assets.")
+      context.assets.open(MODEL_ALLOWLIST_FILENAME).use { inputStream ->
+        val content = inputStream.bufferedReader().readText()
+        val gson = Gson()
+        return gson.fromJson(content, ModelAllowlist::class.java)
+      }
+    } catch (e: Exception) {
+      Log.w(TAG, "Failed to read bundled model allowlist from assets", e)
+      return null
     }
   }
 
@@ -1324,6 +1356,23 @@ constructor(
    */
   private fun getModelDownloadStatus(model: Model): ModelDownloadStatus {
     Log.d(TAG, "Checking model ${model.name} download status...")
+
+    if (model.imported) {
+      val importedFileExists =
+        model.downloadFileName.isNotEmpty() &&
+          isFileInExternalFilesDir(model.downloadFileName)
+      return if (importedFileExists) {
+        Log.d(TAG, "${model.name} imported model file found.")
+        ModelDownloadStatus(
+          status = ModelDownloadStatusType.SUCCEEDED,
+          receivedBytes = model.sizeInBytes,
+          totalBytes = model.sizeInBytes,
+        )
+      } else {
+        Log.d(TAG, "${model.name} imported model file missing.")
+        ModelDownloadStatus(status = ModelDownloadStatusType.NOT_DOWNLOADED)
+      }
+    }
 
     if (model.localFileRelativeDirPathOverride.isNotEmpty()) {
       Log.d(TAG, "Model has localFileRelativeDirPathOverride set. Set status to SUCCEEDED")

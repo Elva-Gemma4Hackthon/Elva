@@ -94,6 +94,7 @@ fun ElvaVoiceScreen(
     healthTriageQuestion: String? = null,
     // Accessibility service status
     isAccessibilityEnabled: Boolean = true,
+    onOpenAccessibilitySettings: () -> Unit = {},
     // Quick action callback for direct text injection
     onQuickAction: (String) -> Unit = {},
     // Model state for UI banner
@@ -288,10 +289,14 @@ fun ElvaVoiceScreen(
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         Text(
-                            text = "⚠️ 无障碍服务未开启，部分功能不可用。请在设置中开启。",
+                            text = "⚠️ 无障碍服务未开启，代操作等功能不可用。",
                             fontSize = 16.sp,
                             color = Color(0xFFE65100),
+                            modifier = Modifier.weight(1f),
                         )
+                        TextButton(onClick = onOpenAccessibilitySettings) {
+                            Text("去开启", color = Color(0xFFE65100))
+                        }
                     }
                 }
             }

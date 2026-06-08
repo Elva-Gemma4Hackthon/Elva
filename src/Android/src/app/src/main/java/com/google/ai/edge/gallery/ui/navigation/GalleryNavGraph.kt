@@ -196,9 +196,28 @@ fun GalleryNavHost(
       val voiceViewModel: com.elva.laobai.ui.ElvaVoiceViewModel = hiltViewModel()
       val uiState by voiceViewModel.uiState.collectAsState()
       val context = LocalContext.current
+      val elvaVoiceLifecycleOwner = LocalLifecycleOwner.current
+      var isAccessibilityEnabled by remember {
+        mutableStateOf(com.elva.laobai.accessibility.ElvaAccessibilityService.isRunning())
+      }
 
-      // Auto-initialize Gemma 4 model when downloaded models change.
-      LaunchedEffect(modelManagerUiState.modelDownloadStatus) {
+      DisposableEffect(elvaVoiceLifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+          if (event == Lifecycle.Event.ON_RESUME) {
+            isAccessibilityEnabled =
+              com.elva.laobai.accessibility.ElvaAccessibilityService.isRunning()
+          }
+        }
+        elvaVoiceLifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { elvaVoiceLifecycleOwner.lifecycle.removeObserver(observer) }
+      }
+
+      // Auto-initialize Gemma 4 model when downloaded/imported models change.
+      LaunchedEffect(
+        modelManagerUiState.modelDownloadStatus,
+        modelManagerUiState.modelImportingUpdateTrigger,
+        modelManagerUiState.tasks,
+      ) {
         val bridge = com.elva.laobai.inference.ElvaInferenceBridge
         if (bridge.state.value.isModelReady || bridge.state.value.isInitializing) {
           return@LaunchedEffect
@@ -224,10 +243,18 @@ fun GalleryNavHost(
 
       // Observe model state for UI banner.
       val bridgeState by com.elva.laobai.inference.ElvaInferenceBridge.state.collectAsState()
+      val downloadedModels =
+        remember(
+          modelManagerUiState.modelDownloadStatus,
+          modelManagerUiState.modelImportingUpdateTrigger,
+          modelManagerUiState.tasks,
+        ) {
+          modelManagerViewModel.getAllDownloadedModels()
+        }
       val modelState = when {
         bridgeState.isModelReady -> com.elva.laobai.ui.ModelState.READY
         bridgeState.isInitializing -> com.elva.laobai.ui.ModelState.LOADING
-        modelManagerViewModel.getAllDownloadedModels().isEmpty() -> com.elva.laobai.ui.ModelState.NOT_DOWNLOADED
+        downloadedModels.isEmpty() -> com.elva.laobai.ui.ModelState.NOT_DOWNLOADED
         else -> com.elva.laobai.ui.ModelState.ERROR
       }
 
@@ -252,7 +279,11 @@ fun GalleryNavHost(
         healthTriageStage = uiState.healthTriageStage,
         healthTriageQuestion = uiState.healthTriageQuestion,
         // Accessibility service status
-        isAccessibilityEnabled = com.elva.laobai.accessibility.ElvaAccessibilityService.isRunning(),
+        isAccessibilityEnabled = isAccessibilityEnabled,
+        onOpenAccessibilitySettings = {
+          com.elva.laobai.accessibility.AccessibilitySettingsNavigator
+            .openElvaAccessibilitySettings(context)
+        },
         // Quick action direct text injection
         onQuickAction = { text -> voiceViewModel.processQuickAction(text) },
         // Model state for UI banner
