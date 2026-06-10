@@ -40,11 +40,14 @@ import com.google.ai.edge.gallery.data.KEY_MODEL_EXTRA_DATA_DOWNLOAD_FILE_NAMES
 import com.google.ai.edge.gallery.data.KEY_MODEL_EXTRA_DATA_URLS
 import com.google.ai.edge.gallery.data.KEY_MODEL_IS_ZIP
 import com.google.ai.edge.gallery.data.KEY_MODEL_NAME
+import com.google.ai.edge.gallery.data.KEY_MODEL_SHA256
 import com.google.ai.edge.gallery.data.KEY_MODEL_START_UNZIPPING
+import com.google.ai.edge.gallery.data.KEY_MODEL_START_VERIFYING
 import com.google.ai.edge.gallery.data.KEY_MODEL_TOTAL_BYTES
 import com.google.ai.edge.gallery.data.KEY_MODEL_UNZIPPED_DIR
 import com.google.ai.edge.gallery.data.KEY_MODEL_URL
 import com.google.ai.edge.gallery.data.TMP_FILE_EXT
+import com.elva.laobai.system.HashVerifier
 import java.io.BufferedInputStream
 import java.io.File
 import java.io.FileInputStream
@@ -103,6 +106,7 @@ class DownloadWorker(context: Context, params: WorkerParameters) :
       inputData.getString(KEY_MODEL_EXTRA_DATA_DOWNLOAD_FILE_NAMES)?.split(",") ?: listOf()
     val totalBytes = inputData.getLong(KEY_MODEL_TOTAL_BYTES, 0L)
     val accessToken = inputData.getString(KEY_MODEL_DOWNLOAD_ACCESS_TOKEN)
+    val expectedSha256 = inputData.getString(KEY_MODEL_SHA256)
 
     return withContext(Dispatchers.IO) {
       if (fileUrl == null || fileName == null) {
@@ -248,6 +252,20 @@ class DownloadWorker(context: Context, params: WorkerParameters) :
 
             outputStream.close()
             inputStream.close()
+
+            // SHA-256 integrity verification (if expected hash is provided).
+            if (!expectedSha256.isNullOrEmpty()) {
+              setProgress(
+                Data.Builder().putBoolean(KEY_MODEL_START_VERIFYING, true).build()
+              )
+              Log.d(TAG, "Verifying SHA-256 for ${file.fileName}...")
+              val isValid = HashVerifier.verifySha256(outputTmpFile, expectedSha256)
+              if (!isValid) {
+                outputTmpFile.delete()
+                throw IOException("SHA-256 verification failed for ${file.fileName}")
+              }
+              Log.d(TAG, "SHA-256 verification passed for ${file.fileName}")
+            }
 
             // Rename the tmp file to the original file name by removing the tmp file ext.
             val originalFilePath = outputTmpFile.absolutePath.replace(".$TMP_FILE_EXT", "")

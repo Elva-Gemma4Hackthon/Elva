@@ -40,6 +40,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
@@ -64,7 +65,7 @@ import androidx.core.content.ContextCompat
 import com.google.ai.edge.gallery.ui.theme.customColors
 
 /** Model initialization state for UI banner. */
-enum class ModelState { LOADING, READY, NOT_DOWNLOADED, ERROR }
+enum class ModelState { LOADING, READY, NOT_DOWNLOADED, DOWNLOADING, DOWNLOAD_PAUSED, ERROR, LOW_MEMORY }
 
 /**
  * The main voice-first home screen for Elva LaoBai.
@@ -204,12 +205,34 @@ fun ElvaVoiceScreen(
                         contentColor = MaterialTheme.customColors.errorTextColor,
                     )
                 }
+                ModelState.DOWNLOADING -> {
+                    ModelDownloadProgressBanner(
+                        modelName = modelName,
+                        onNavigateToModelManager = onNavigateToModelManager,
+                    )
+                }
+                ModelState.DOWNLOAD_PAUSED -> {
+                    StatusBanner(
+                        text = "下载已暂停",
+                        supportingText = "连接 Wi-Fi 后将自动继续下载 ${modelName} 模型",
+                        containerColor = MaterialTheme.customColors.warningContainerColor,
+                        contentColor = MaterialTheme.customColors.warningTextColor,
+                    )
+                }
                 ModelState.ERROR -> {
                     StatusBanner(
                         text = "AI 模型加载失败，使用基础模式。",
                         supportingText = modelErrorMessage,
                         containerColor = MaterialTheme.customColors.warningContainerColor,
                         contentColor = MaterialTheme.customColors.warningTextColor,
+                    )
+                }
+                ModelState.LOW_MEMORY -> {
+                    StatusBanner(
+                        text = "设备内存不足",
+                        supportingText = modelErrorMessage ?: "建议关闭其他应用后重试",
+                        containerColor = MaterialTheme.customColors.errorContainerColor,
+                        contentColor = MaterialTheme.customColors.errorTextColor,
                     )
                 }
                 ModelState.READY -> { /* No banner when model is ready */ }
@@ -504,5 +527,68 @@ private fun ResponseCard(
             textAlign = TextAlign.Center,
             color = contentColor,
         )
+    }
+}
+
+/**
+ * Download progress banner shown when a model is being downloaded.
+ * Displays model name, progress bar, percentage, and a button to open model manager.
+ * Designed with large text for elderly users.
+ */
+@Composable
+private fun ModelDownloadProgressBanner(
+    modelName: String,
+    onNavigateToModelManager: () -> Unit,
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(12.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.primaryContainer,
+        ),
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    text = "正在下载 AI 模型",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Medium,
+                    color = MaterialTheme.colorScheme.onPrimaryContainer,
+                )
+                TextButton(onClick = onNavigateToModelManager) {
+                    Text(
+                        text = "查看详情",
+                        style = MaterialTheme.typography.bodyMedium,
+                    )
+                }
+            }
+
+            Text(
+                text = modelName,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f),
+            )
+
+            LinearProgressIndicator(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(8.dp),
+                color = MaterialTheme.colorScheme.primary,
+                trackColor = MaterialTheme.colorScheme.primaryContainer,
+            )
+
+            Text(
+                text = "下载完成后将自动加载模型，请保持网络连接",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.6f),
+            )
+        }
     }
 }

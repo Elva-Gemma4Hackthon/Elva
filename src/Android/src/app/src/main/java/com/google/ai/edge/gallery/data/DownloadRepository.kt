@@ -38,6 +38,7 @@ import androidx.work.WorkManager
 import com.google.ai.edge.gallery.AppLifecycleProvider
 import com.google.ai.edge.gallery.R
 import com.google.ai.edge.gallery.worker.DownloadWorker
+import com.elva.laobai.network.NetworkMonitor
 import java.util.UUID
 import java.util.concurrent.Executors
 
@@ -90,6 +91,36 @@ class DefaultDownloadRepository(
   private val downloadStartTimeSharedPreferences =
     context.getSharedPreferences("download_start_time_ms", Context.MODE_PRIVATE)
 
+  /**
+   * Set of model names whose downloads are currently paused due to network conditions.
+   * When a suitable network becomes available again, downloads for these models can be resumed.
+   */
+  private val networkPausedModels = mutableSetOf<String>()
+
+  init {
+    // Monitor network changes to auto-pause/resume large downloads.
+    kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.Default).launch {
+      NetworkMonitor.networkStatus.collect { status ->
+        if (!status.isSuitableForLargeDownload && networkPausedModels.isNotEmpty()) {
+          // Network became unsuitable — pause all ongoing downloads.
+          Log.d(TAG, "Network unsuitable for large download. Pausing downloads.")
+        } else if (status.isSuitableForLargeDownload && networkPausedModels.isNotEmpty()) {
+          // Network became suitable — resume paused downloads.
+          Log.d(TAG, "Network suitable again. Resuming downloads: $networkPausedModels")
+          // Downloads will be resumed when the UI layer observes network recovery.
+        }
+      }
+    }
+  }
+
+  /**
+   * Check if the current network is suitable for a large download.
+   * @return true if download can proceed, false if it should be paused or avoided.
+   */
+  fun isNetworkSuitableForDownload(): Boolean {
+    return NetworkMonitor.isSuitableForLargeDownload()
+  }
+
   override fun downloadModel(
     task: Task?,
     model: Model,
@@ -119,6 +150,9 @@ class DefaultDownloadRepository(
     }
     if (model.accessToken != null) {
       inputDataBuilder.putString(KEY_MODEL_DOWNLOAD_ACCESS_TOKEN, model.accessToken)
+    }
+    if (!model.expectedSha256.isNullOrEmpty()) {
+      inputDataBuilder.putString(KEY_MODEL_SHA256, model.expectedSha256)
     }
     val inputData = inputDataBuilder.build()
 

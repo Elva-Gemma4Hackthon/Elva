@@ -6,6 +6,7 @@ package com.elva.laobai.inference
 
 import android.content.Context
 import android.util.Log
+import com.elva.laobai.system.MemoryMonitor
 import com.google.ai.edge.gallery.data.Model
 import com.google.ai.edge.gallery.runtime.LlmModelHelper
 import com.google.ai.edge.gallery.runtime.ResultListener
@@ -55,6 +56,18 @@ object ElvaInferenceBridge {
         onReady: () -> Unit,
     ) {
         Log.d(TAG, "initialize: requested model=${model.name}, alreadyInitialized=$isInitialized, currentModel=${currentModel?.name}")
+
+        // Check memory before initializing a large model.
+        if (!MemoryMonitor.isMemorySufficientForModel(model.sizeInBytes)) {
+            Log.w(TAG, "Insufficient memory to load model ${model.name}")
+            _state.value = InferenceState(
+                isInitializing = false,
+                modelName = model.name,
+                lastError = "设备内存不足，无法加载模型。请关闭其他应用后重试。",
+            )
+            return
+        }
+
         if (isInitialized && currentModel?.name == model.name) {
             Log.d(TAG, "initialize: reuse existing initialized model ${model.name}")
             onReady()

@@ -22,6 +22,7 @@ import androidx.activity.result.ActivityResult
 import androidx.core.net.toUri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.elva.laobai.system.MemoryMonitor
 import com.google.ai.edge.gallery.AppLifecycleProvider
 import com.google.ai.edge.gallery.BuildConfig
 import com.google.ai.edge.gallery.R
@@ -283,6 +284,21 @@ constructor(
   }
 
   open fun downloadModel(task: Task?, model: Model) {
+    // Check memory before downloading a large model (> 500 MB).
+    val modelSizeMb = model.sizeInBytes / (1024 * 1024)
+    if (modelSizeMb > 500 && !MemoryMonitor.isMemorySufficientForModel(model.sizeInBytes)) {
+      Log.w(TAG, "Insufficient memory to download ${model.name} (${modelSizeMb}MB)")
+      setDownloadStatus(
+        curModel = model,
+        status =
+          ModelDownloadStatus(
+            status = ModelDownloadStatusType.FAILED,
+            errorMessage = "设备内存不足，无法下载此模型。请清理空间后重试。",
+          ),
+      )
+      return
+    }
+
     // Update status.
     setDownloadStatus(
       curModel = model,

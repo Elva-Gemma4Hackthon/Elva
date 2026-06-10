@@ -285,6 +285,9 @@ data class Model(
   /** Compatible accelerators. */
   val accelerators: List<Accelerator> = listOf(),
 
+  /** The expected SHA-256 hash of the downloaded model file (for integrity verification). */
+  val expectedSha256: String? = null,
+
   /** Accelerator for running vision encoder. */
   val visionAccelerator: Accelerator = Accelerator.GPU,
 

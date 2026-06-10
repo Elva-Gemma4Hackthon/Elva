@@ -19,6 +19,9 @@ package com.google.ai.edge.gallery
 import android.app.Application
 import com.elva.laobai.ElvaTtsManager
 import com.elva.laobai.memory.LocalUserMemory
+import com.elva.laobai.network.NetworkMonitor
+import com.elva.laobai.onboarding.FirstLaunchWizard
+import com.elva.laobai.system.MemoryMonitor
 import com.google.ai.edge.gallery.data.DataStoreRepository
 import com.google.ai.edge.gallery.ui.theme.ThemeSettings
 import dagger.hilt.android.HiltAndroidApp
@@ -47,6 +50,15 @@ class GalleryApplication : Application() {
 
     // Elva LaoBai: Initialize encrypted user memory store.
     LocalUserMemory.initialize(this)
+
+    // Elva LaoBai: Initialize network monitor for Wi-Fi detection.
+    NetworkMonitor.initialize(this)
+
+    // Elva LaoBai: Initialize first launch wizard.
+    FirstLaunchWizard.initialize(this)
+
+    // Elva LaoBai: Initialize memory monitor for large-model safety.
+    MemoryMonitor.initialize(this)
   }
 
   override fun onTerminate() {

@@ -8,6 +8,7 @@
       "sizeInBytes": 3659530240,
       "minDeviceMemoryInGb": 12,
       "commitHash": "28299f30ee4d43294517a4ac93abd6163412f07f",
+      "sha256": "",
       "llmSupportImage": true,
       "llmSupportAudio": true,
       "capabilities": ["llm_thinking", "speculative_decoding"],
@@ -47,6 +48,7 @@
       "sizeInBytes": 3136226711,
       "estimatedPeakMemoryInBytes": 5905580032,
       "version": "20250520",
+      "sha256": "",
       "llmSupportImage": true,
       "defaultConfig": {
         "topK": 64,
@@ -65,6 +67,7 @@
       "sizeInBytes": 4405655031,
       "estimatedPeakMemoryInBytes": 6979321856,
       "version": "20250520",
+      "sha256": "",
       "llmSupportImage": true,
       "defaultConfig": {
         "topK": 64,
@@ -83,6 +86,7 @@
       "sizeInBytes": 554661246,
       "estimatedPeakMemoryInBytes": 2147483648,
       "version": "20250514",
+      "sha256": "",
       "defaultConfig": {
         "topK": 64,
         "topP": 0.95,
@@ -100,6 +104,7 @@
       "sizeInBytes": 1625493432,
       "estimatedPeakMemoryInBytes": 2684354560,
       "version": "20250514",
+      "sha256": "",
       "defaultConfig": {
         "topK": 40,
         "topP": 0.95,

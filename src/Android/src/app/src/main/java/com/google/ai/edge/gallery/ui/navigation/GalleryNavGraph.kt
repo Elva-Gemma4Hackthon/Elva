@@ -23,6 +23,11 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
+import com.elva.laobai.network.NetworkMonitor
+import com.elva.laobai.onboarding.FirstLaunchWizard
+import com.elva.laobai.onboarding.FirstLaunchStep
+import com.elva.laobai.system.MemoryMonitor
+import com.google.ai.edge.gallery.data.ModelDownloadStatusType
 import com.google.ai.edge.gallery.ui.modelmanager.GlobalModelManager
 import com.google.ai.edge.gallery.ui.modelmanager.ModelManagerViewModel
 
@@ -39,6 +44,16 @@ fun GalleryNavHost(
 ) {
   val lifecycleOwner = LocalLifecycleOwner.current
   val modelManagerUiState by modelManagerViewModel.uiState.collectAsState()
+  val firstLaunchState by FirstLaunchWizard.state.collectAsState()
+  val networkStatus by NetworkMonitor.networkStatus.collectAsState()
+  val memoryStatus by MemoryMonitor.memoryStatus.collectAsState()
+
+  // Start memory polling while the nav graph is active.
+  DisposableEffect(lifecycleOwner) {
+    MemoryMonitor.refresh()
+    MemoryMonitor.startPolling()
+    onDispose { MemoryMonitor.stopPolling() }
+  }
 
   DisposableEffect(lifecycleOwner) {
     val observer = LifecycleEventObserver { _, event ->
@@ -78,6 +93,40 @@ fun GalleryNavHost(
         }
         screenLifecycleOwner.lifecycle.addObserver(observer)
         onDispose { screenLifecycleOwner.lifecycle.removeObserver(observer) }
+      }
+
+      // First-launch wizard: check on first composition.
+      LaunchedEffect(Unit) {
+        val isFirstLaunch = FirstLaunchWizard.checkFirstLaunch()
+        if (isFirstLaunch) {
+          FirstLaunchWizard.evaluateNetworkStatus()
+        }
+      }
+
+      // Auto-trigger download when first-launch wizard indicates ready.
+      LaunchedEffect(firstLaunchState.step, modelManagerUiState.loadingModelAllowlist) {
+        if (firstLaunchState.step == FirstLaunchStep.READY_TO_DOWNLOAD &&
+          !modelManagerUiState.loadingModelAllowlist
+        ) {
+          val downloadedModels = modelManagerViewModel.getAllDownloadedModels()
+          if (downloadedModels.isEmpty()) {
+            val allModels = modelManagerViewModel.getAllModels()
+            val bestModel =
+              allModels.firstOrNull {
+                it.name.contains("gemma-4-e4b", ignoreCase = true)
+              } ?: allModels.firstOrNull {
+                it.name.contains("gemma", ignoreCase = true)
+              }
+            if (bestModel != null) {
+              Log.d(TAG, "First launch: auto-downloading ${bestModel.name}")
+              modelManagerViewModel.downloadModel(task = null, model = bestModel)
+              FirstLaunchWizard.markCompleted()
+            }
+          } else {
+            // Models already present — skip wizard.
+            FirstLaunchWizard.markCompleted()
+          }
+        }
       }
 
       LaunchedEffect(
@@ -130,9 +179,19 @@ fun GalleryNavHost(
         ) {
           modelManagerViewModel.getAllDownloadedModels()
         }
+      // Check if any model is actively downloading.
+      val isDownloading = modelManagerUiState.modelDownloadStatus.values.any {
+        it.status == ModelDownloadStatusType.IN_PROGRESS
+      }
       val modelState = when {
+        memoryStatus.memoryPressureLevel == com.elva.laobai.system.MemoryPressureLevel.HIGH ||
+          memoryStatus.memoryPressureLevel == com.elva.laobai.system.MemoryPressureLevel.CRITICAL ->
+          com.elva.laobai.ui.ModelState.LOW_MEMORY
         bridgeState.isModelReady -> com.elva.laobai.ui.ModelState.READY
         bridgeState.isInitializing -> com.elva.laobai.ui.ModelState.LOADING
+        isDownloading && !networkStatus.isSuitableForLargeDownload ->
+          com.elva.laobai.ui.ModelState.DOWNLOAD_PAUSED
+        isDownloading -> com.elva.laobai.ui.ModelState.DOWNLOADING
         downloadedModels.isEmpty() -> com.elva.laobai.ui.ModelState.NOT_DOWNLOADED
         else -> com.elva.laobai.ui.ModelState.ERROR
       }
