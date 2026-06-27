@@ -58,19 +58,19 @@ class ElvaVoiceViewModel @Inject constructor(
             if (!SpeechRecognizer.isRecognitionAvailable(context)) {
                 Log.w(TAG, "SpeechRecognizer service not available on this device")
                 _uiState.update { it.copy(responseText = "此设备不支持语音识别服务，请使用文字输入。") }
-                return
+            } else {
+                speechRecognizer = SpeechRecognizer.createSpeechRecognizer(context)
+                speechRecognizer?.setRecognitionListener(this)
+                recognizerIntent = android.content.Intent(
+                    RecognizerIntent.ACTION_RECOGNIZE_SPEECH
+                ).apply {
+                    putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
+                    putExtra(RecognizerIntent.EXTRA_LANGUAGE, "zh-CN")
+                    putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 1)
+                    putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, true)
+                }
+                Log.d(TAG, "SpeechRecognizer initialized successfully")
             }
-            speechRecognizer = SpeechRecognizer.createSpeechRecognizer(context)
-            speechRecognizer?.setRecognitionListener(this)
-            recognizerIntent = android.content.Intent(
-                RecognizerIntent.ACTION_RECOGNIZE_SPEECH
-            ).apply {
-                putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
-                putExtra(RecognizerIntent.EXTRA_LANGUAGE, "zh-CN")
-                putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 1)
-                putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, true)
-            }
-            Log.d(TAG, "SpeechRecognizer initialized successfully")
         } catch (e: Exception) {
             Log.e(TAG, "Failed to initialize SpeechRecognizer", e)
             speechRecognizer = null
