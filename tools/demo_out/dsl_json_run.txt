@@ -1,0 +1,10 @@
+[001] keyevent 3
+[002] sleep 0.5s
+[003] com.android.settings/.Settings
+[004] stable (65 nodes)
+[005] tap text='Sound & vibration'
+[006] stable (67 nodes)
+[007] screenshot -> sound_settings.png
+[008] swipe (540,1800) -> (540,600) 400ms
+[009] screenshot -> sound_settings_scrolled.png
+[010] keyevent 4

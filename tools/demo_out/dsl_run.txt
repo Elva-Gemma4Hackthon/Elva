@@ -1,0 +1,8 @@
+[01] keyevent 3
+[02] sleep 0.5s
+[03] com.android.settings/.Settings
+[04] stable (65 nodes)
+[05] tap text='Sound'
+[06] screenshot -> dsl_demo.png
+[07] keyevent 4
+[08] dump -> dsl_ui.json (65 nodes)

@@ -1,0 +1,1432 @@
+[
+  {
+    "text": "",
+    "resource_id": "",
+    "class": "android.widget.FrameLayout",
+    "content_desc": "",
+    "package": "com.android.settings",
+    "bounds": [
+      0,
+      0,
+      1080,
+      2400
+    ],
+    "center": [
+      540,
+      1200
+    ],
+    "clickable": false,
+    "enabled": true,
+    "focused": false,
+    "long_clickable": false,
+    "scrollable": false
+  },
+  {
+    "text": "",
+    "resource_id": "",
+    "class": "android.widget.LinearLayout",
+    "content_desc": "",
+    "package": "com.android.settings",
+    "bounds": [
+      0,
+      0,
+      1080,
+      2400
+    ],
+    "center": [
+      540,
+      1200
+    ],
+    "clickable": false,
+    "enabled": true,
+    "focused": false,
+    "long_clickable": false,
+    "scrollable": false
+  },
+  {
+    "text": "",
+    "resource_id": "android:id/content",
+    "class": "android.widget.FrameLayout",
+    "content_desc": "",
+    "package": "com.android.settings",
+    "bounds": [
+      0,
+      0,
+      1080,
+      2400
+    ],
+    "center": [
+      540,
+      1200
+    ],
+    "clickable": false,
+    "enabled": true,
+    "focused": false,
+    "long_clickable": false,
+    "scrollable": false
+  },
+  {
+    "text": "",
+    "resource_id": "com.android.settings:id/settings_homepage_container",
+    "class": "android.widget.ScrollView",
+    "content_desc": "",
+    "package": "com.android.settings",
+    "bounds": [
+      0,
+      128,
+      1080,
+      2337
+    ],
+    "center": [
+      540,
+      1232
+    ],
+    "clickable": false,
+    "enabled": true,
+    "focused": false,
+    "long_clickable": false,
+    "scrollable": true
+  },
+  {
+    "text": "",
+    "resource_id": "com.android.settings:id/app_bar",
+    "class": "android.widget.LinearLayout",
+    "content_desc": "",
+    "package": "com.android.settings",
+    "bounds": [
+      0,
+      128,
+      1080,
+      770
+    ],
+    "center": [
+      540,
+      449
+    ],
+    "clickable": false,
+    "enabled": true,
+    "focused": false,
+    "long_clickable": false,
+    "scrollable": false
+  },
+  {
+    "text": "",
+    "resource_id": "com.android.settings:id/app_bar_container",
+    "class": "android.widget.LinearLayout",
+    "content_desc": "",
+    "package": "com.android.settings",
+    "bounds": [
+      0,
+      128,
+      1080,
+      770
+    ],
+    "center": [
+      540,
+      449
+    ],
+    "clickable": false,
+    "enabled": true,
+    "focused": false,
+    "long_clickable": false,
+    "scrollable": false
+  },
+  {
+    "text": "",
+    "resource_id": "com.android.settings:id/homepage_app_bar_regular_phone_view",
+    "class": "android.widget.LinearLayout",
+    "content_desc": "",
+    "package": "com.android.settings",
+    "bounds": [
+      0,
+      128,
+      1080,
+      770
+    ],
+    "center": [
+      540,
+      449
+    ],
+    "clickable": false,
+    "enabled": true,
+    "focused": false,
+    "long_clickable": false,
+    "scrollable": false
+  },
+  {
+    "text": "",
+    "resource_id": "com.android.settings:id/account_avatar",
+    "class": "android.widget.ImageView",
+    "content_desc": "Profile picture, double tap to open Google Account",
+    "package": "com.android.settings",
+    "bounds": [
+      891,
+      275,
+      1017,
+      401
+    ],
+    "center": [
+      954,
+      338
+    ],
+    "clickable": true,
+    "enabled": true,
+    "focused": false,
+    "long_clickable": false,
+    "scrollable": false
+  },
+  {
+    "text": "Settings",
+    "resource_id": "com.android.settings:id/homepage_title",
+    "class": "android.widget.TextView",
+    "content_desc": "",
+    "package": "com.android.settings",
+    "bounds": [
+      63,
+      401,
+      408,
+      528
+    ],
+    "center": [
+      235,
+      464
+    ],
+    "clickable": false,
+    "enabled": true,
+    "focused": false,
+    "long_clickable": false,
+    "scrollable": false
+  },
+  {
+    "text": "",
+    "resource_id": "",
+    "class": "android.widget.LinearLayout",
+    "content_desc": "",
+    "package": "com.android.settings",
+    "bounds": [
+      42,
+      591,
+      1038,
+      728
+    ],
+    "center": [
+      540,
+      659
+    ],
+    "clickable": false,
+    "enabled": true,
+    "focused": false,
+    "long_clickable": false,
+    "scrollable": false
+  },
+  {
+    "text": "",
+    "resource_id": "com.android.settings:id/search_bar",
+    "class": "androidx.cardview.widget.CardView",
+    "content_desc": "",
+    "package": "com.android.settings",
+    "bounds": [
+      42,
+      591,
+      1038,
+      728
+    ],
+    "center": [
+      540,
+      659
+    ],
+    "clickable": false,
+    "enabled": true,
+    "focused": false,
+    "long_clickable": false,
+    "scrollable": false
+  },
+  {
+    "text": "",
+    "resource_id": "com.android.settings:id/search_action_bar",
+    "class": "android.view.ViewGroup",
+    "content_desc": "",
+    "package": "com.android.settings",
+    "bounds": [
+      42,
+      591,
+      1038,
+      728
+    ],
+    "center": [
+      540,
+      659
+    ],
+    "clickable": true,
+    "enabled": true,
+    "focused": false,
+    "long_clickable": false,
+    "scrollable": false
+  },
+  {
+    "text": "",
+    "resource_id": "",
+    "class": "android.widget.ImageButton",
+    "content_desc": "",
+    "package": "com.android.settings",
+    "bounds": [
+      53,
+      591,
+      200,
+      728
+    ],
+    "center": [
+      126,
+      659
+    ],
+    "clickable": false,
+    "enabled": true,
+    "focused": false,
+    "long_clickable": false,
+    "scrollable": false
+  },
+  {
+    "text": "Search settings",
+    "resource_id": "com.android.settings:id/search_action_bar_title",
+    "class": "android.widget.TextView",
+    "content_desc": "",
+    "package": "com.android.settings",
+    "bounds": [
+      200,
+      624,
+      553,
+      695
+    ],
+    "center": [
+      376,
+      659
+    ],
+    "clickable": false,
+    "enabled": true,
+    "focused": false,
+    "long_clickable": false,
+    "scrollable": false
+  },
+  {
+    "text": "",
+    "resource_id": "com.android.settings:id/main_content_scrollable_container",
+    "class": "android.widget.ScrollView",
+    "content_desc": "",
+    "package": "com.android.settings",
+    "bounds": [
+      0,
+      770,
+      1080,
+      2337
+    ],
+    "center": [
+      540,
+      1553
+    ],
+    "clickable": false,
+    "enabled": true,
+    "focused": false,
+    "long_clickable": false,
+    "scrollable": true
+  },
+  {
+    "text": "",
+    "resource_id": "com.android.settings:id/homepage_container",
+    "class": "android.widget.LinearLayout",
+    "content_desc": "",
+    "package": "com.android.settings",
+    "bounds": [
+      0,
+      770,
+      1080,
+      2337
+    ],
+    "center": [
+      540,
+      1553
+    ],
+    "clickable": false,
+    "enabled": true,
+    "focused": false,
+    "long_clickable": false,
+    "scrollable": false
+  },
+  {
+    "text": "",
+    "resource_id": "com.android.settings:id/main_content",
+    "class": "android.widget.FrameLayout",
+    "content_desc": "",
+    "package": "com.android.settings",
+    "bounds": [
+      0,
+      770,
+      1080,
+      2337
+    ],
+    "center": [
+      540,
+      1553
+    ],
+    "clickable": false,
+    "enabled": true,
+    "focused": false,
+    "long_clickable": false,
+    "scrollable": false
+  },
+  {
+    "text": "",
+    "resource_id": "com.android.settings:id/container_material",
+    "class": "android.widget.LinearLayout",
+    "content_desc": "",
+    "package": "com.android.settings",
+    "bounds": [
+      0,
+      770,
+      1080,
+      2337
+    ],
+    "center": [
+      540,
+      1553
+    ],
+    "clickable": false,
+    "enabled": true,
+    "focused": false,
+    "long_clickable": false,
+    "scrollable": false
+  },
+  {
+    "text": "",
+    "resource_id": "android:id/list_container",
+    "class": "android.widget.FrameLayout",
+    "content_desc": "",
+    "package": "com.android.settings",
+    "bounds": [
+      0,
+      770,
+      1080,
+      2337
+    ],
+    "center": [
+      540,
+      1553
+    ],
+    "clickable": false,
+    "enabled": true,
+    "focused": false,
+    "long_clickable": false,
+    "scrollable": false
+  },
+  {
+    "text": "",
+    "resource_id": "com.android.settings:id/recycler_view",
+    "class": "androidx.recyclerview.widget.RecyclerView",
+    "content_desc": "",
+    "package": "com.android.settings",
+    "bounds": [
+      0,
+      770,
+      1080,
+      2337
+    ],
+    "center": [
+      540,
+      1553
+    ],
+    "clickable": false,
+    "enabled": true,
+    "focused": false,
+    "long_clickable": false,
+    "scrollable": false
+  },
+  {
+    "text": "",
+    "resource_id": "",
+    "class": "android.widget.LinearLayout",
+    "content_desc": "",
+    "package": "com.android.settings",
+    "bounds": [
+      0,
+      770,
+      1080,
+      1001
+    ],
+    "center": [
+      540,
+      885
+    ],
+    "clickable": true,
+    "enabled": true,
+    "focused": false,
+    "long_clickable": false,
+    "scrollable": false
+  },
+  {
+    "text": "",
+    "resource_id": "com.android.settings:id/icon_frame",
+    "class": "android.widget.LinearLayout",
+    "content_desc": "",
+    "package": "com.android.settings",
+    "bounds": [
+      0,
+      843,
+      147,
+      928
+    ],
+    "center": [
+      73,
+      885
+    ],
+    "clickable": false,
+    "enabled": true,
+    "focused": false,
+    "long_clickable": false,
+    "scrollable": false
+  },
+  {
+    "text": "",
+    "resource_id": "android:id/icon",
+    "class": "android.widget.ImageView",
+    "content_desc": "",
+    "package": "com.android.settings",
+    "bounds": [
+      84,
+      854,
+      147,
+      917
+    ],
+    "center": [
+      115,
+      885
+    ],
+    "clickable": false,
+    "enabled": true,
+    "focused": false,
+    "long_clickable": false,
+    "scrollable": false
+  },
+  {
+    "text": "",
+    "resource_id": "com.android.settings:id/text_frame",
+    "class": "android.widget.RelativeLayout",
+    "content_desc": "",
+    "package": "com.android.settings",
+    "bounds": [
+      147,
+      782,
+      1080,
+      988
+    ],
+    "center": [
+      613,
+      885
+    ],
+    "clickable": false,
+    "enabled": true,
+    "focused": false,
+    "long_clickable": false,
+    "scrollable": false
+  },
+  {
+    "text": "Network & internet",
+    "resource_id": "android:id/title",
+    "class": "android.widget.TextView",
+    "content_desc": "",
+    "package": "com.android.settings",
+    "bounds": [
+      189,
+      824,
+      625,
+      895
+    ],
+    "center": [
+      407,
+      859
+    ],
+    "clickable": false,
+    "enabled": true,
+    "focused": false,
+    "long_clickable": false,
+    "scrollable": false
+  },
+  {
+    "text": "Mobile, Wi‑Fi, hotspot",
+    "resource_id": "android:id/summary",
+    "class": "android.widget.TextView",
+    "content_desc": "",
+    "package": "com.android.settings",
+    "bounds": [
+      189,
+      895,
+      540,
+      946
+    ],
+    "center": [
+      364,
+      920
+    ],
+    "clickable": false,
+    "enabled": true,
+    "focused": false,
+    "long_clickable": false,
+    "scrollable": false
+  },
+  {
+    "text": "",
+    "resource_id": "",
+    "class": "android.widget.LinearLayout",
+    "content_desc": "",
+    "package": "com.android.settings",
+    "bounds": [
+      0,
+      1001,
+      1080,
+      1232
+    ],
+    "center": [
+      540,
+      1116
+    ],
+    "clickable": true,
+    "enabled": true,
+    "focused": false,
+    "long_clickable": false,
+    "scrollable": false
+  },
+  {
+    "text": "",
+    "resource_id": "com.android.settings:id/icon_frame",
+    "class": "android.widget.LinearLayout",
+    "content_desc": "",
+    "package": "com.android.settings",
+    "bounds": [
+      0,
+      1074,
+      147,
+      1159
+    ],
+    "center": [
+      73,
+      1116
+    ],
+    "clickable": false,
+    "enabled": true,
+    "focused": false,
+    "long_clickable": false,
+    "scrollable": false
+  },
+  {
+    "text": "",
+    "resource_id": "android:id/icon",
+    "class": "android.widget.ImageView",
+    "content_desc": "",
+    "package": "com.android.settings",
+    "bounds": [
+      84,
+      1085,
+      147,
+      1148
+    ],
+    "center": [
+      115,
+      1116
+    ],
+    "clickable": false,
+    "enabled": true,
+    "focused": false,
+    "long_clickable": false,
+    "scrollable": false
+  },
+  {
+    "text": "",
+    "resource_id": "com.android.settings:id/text_frame",
+    "class": "android.widget.RelativeLayout",
+    "content_desc": "",
+    "package": "com.android.settings",
+    "bounds": [
+      147,
+      1013,
+      1080,
+      1219
+    ],
+    "center": [
+      613,
+      1116
+    ],
+    "clickable": false,
+    "enabled": true,
+    "focused": false,
+    "long_clickable": false,
+    "scrollable": false
+  },
+  {
+    "text": "Connected devices",
+    "resource_id": "android:id/title",
+    "class": "android.widget.TextView",
+    "content_desc": "",
+    "package": "com.android.settings",
+    "bounds": [
+      189,
+      1055,
+      636,
+      1126
+    ],
+    "center": [
+      412,
+      1090
+    ],
+    "clickable": false,
+    "enabled": true,
+    "focused": false,
+    "long_clickable": false,
+    "scrollable": false
+  },
+  {
+    "text": "Bluetooth, pairing",
+    "resource_id": "android:id/summary",
+    "class": "android.widget.TextView",
+    "content_desc": "",
+    "package": "com.android.settings",
+    "bounds": [
+      189,
+      1126,
+      476,
+      1177
+    ],
+    "center": [
+      332,
+      1151
+    ],
+    "clickable": false,
+    "enabled": true,
+    "focused": false,
+    "long_clickable": false,
+    "scrollable": false
+  },
+  {
+    "text": "",
+    "resource_id": "",
+    "class": "android.widget.LinearLayout",
+    "content_desc": "",
+    "package": "com.android.settings",
+    "bounds": [
+      0,
+      1232,
+      1080,
+      1463
+    ],
+    "center": [
+      540,
+      1347
+    ],
+    "clickable": true,
+    "enabled": true,
+    "focused": false,
+    "long_clickable": false,
+    "scrollable": false
+  },
+  {
+    "text": "",
+    "resource_id": "com.android.settings:id/icon_frame",
+    "class": "android.widget.LinearLayout",
+    "content_desc": "",
+    "package": "com.android.settings",
+    "bounds": [
+      0,
+      1305,
+      147,
+      1390
+    ],
+    "center": [
+      73,
+      1347
+    ],
+    "clickable": false,
+    "enabled": true,
+    "focused": false,
+    "long_clickable": false,
+    "scrollable": false
+  },
+  {
+    "text": "",
+    "resource_id": "android:id/icon",
+    "class": "android.widget.ImageView",
+    "content_desc": "",
+    "package": "com.android.settings",
+    "bounds": [
+      84,
+      1316,
+      147,
+      1379
+    ],
+    "center": [
+      115,
+      1347
+    ],
+    "clickable": false,
+    "enabled": true,
+    "focused": false,
+    "long_clickable": false,
+    "scrollable": false
+  },
+  {
+    "text": "",
+    "resource_id": "com.android.settings:id/text_frame",
+    "class": "android.widget.RelativeLayout",
+    "content_desc": "",
+    "package": "com.android.settings",
+    "bounds": [
+      147,
+      1244,
+      1080,
+      1450
+    ],
+    "center": [
+      613,
+      1347
+    ],
+    "clickable": false,
+    "enabled": true,
+    "focused": false,
+    "long_clickable": false,
+    "scrollable": false
+  },
+  {
+    "text": "Apps",
+    "resource_id": "android:id/title",
+    "class": "android.widget.TextView",
+    "content_desc": "",
+    "package": "com.android.settings",
+    "bounds": [
+      189,
+      1286,
+      311,
+      1357
+    ],
+    "center": [
+      250,
+      1321
+    ],
+    "clickable": false,
+    "enabled": true,
+    "focused": false,
+    "long_clickable": false,
+    "scrollable": false
+  },
+  {
+    "text": "Assistant, recent apps, default apps",
+    "resource_id": "android:id/summary",
+    "class": "android.widget.TextView",
+    "content_desc": "",
+    "package": "com.android.settings",
+    "bounds": [
+      189,
+      1357,
+      774,
+      1408
+    ],
+    "center": [
+      481,
+      1382
+    ],
+    "clickable": false,
+    "enabled": true,
+    "focused": false,
+    "long_clickable": false,
+    "scrollable": false
+  },
+  {
+    "text": "",
+    "resource_id": "",
+    "class": "android.widget.LinearLayout",
+    "content_desc": "",
+    "package": "com.android.settings",
+    "bounds": [
+      0,
+      1463,
+      1080,
+      1694
+    ],
+    "center": [
+      540,
+      1578
+    ],
+    "clickable": true,
+    "enabled": true,
+    "focused": false,
+    "long_clickable": false,
+    "scrollable": false
+  },
+  {
+    "text": "",
+    "resource_id": "com.android.settings:id/icon_frame",
+    "class": "android.widget.LinearLayout",
+    "content_desc": "",
+    "package": "com.android.settings",
+    "bounds": [
+      0,
+      1536,
+      147,
+      1621
+    ],
+    "center": [
+      73,
+      1578
+    ],
+    "clickable": false,
+    "enabled": true,
+    "focused": false,
+    "long_clickable": false,
+    "scrollable": false
+  },
+  {
+    "text": "",
+    "resource_id": "android:id/icon",
+    "class": "android.widget.ImageView",
+    "content_desc": "",
+    "package": "com.android.settings",
+    "bounds": [
+      84,
+      1547,
+      147,
+      1610
+    ],
+    "center": [
+      115,
+      1578
+    ],
+    "clickable": false,
+    "enabled": true,
+    "focused": false,
+    "long_clickable": false,
+    "scrollable": false
+  },
+  {
+    "text": "",
+    "resource_id": "com.android.settings:id/text_frame",
+    "class": "android.widget.RelativeLayout",
+    "content_desc": "",
+    "package": "com.android.settings",
+    "bounds": [
+      147,
+      1475,
+      1080,
+      1681
+    ],
+    "center": [
+      613,
+      1578
+    ],
+    "clickable": false,
+    "enabled": true,
+    "focused": false,
+    "long_clickable": false,
+    "scrollable": false
+  },
+  {
+    "text": "Notifications",
+    "resource_id": "android:id/title",
+    "class": "android.widget.TextView",
+    "content_desc": "",
+    "package": "com.android.settings",
+    "bounds": [
+      189,
+      1517,
+      489,
+      1588
+    ],
+    "center": [
+      339,
+      1552
+    ],
+    "clickable": false,
+    "enabled": true,
+    "focused": false,
+    "long_clickable": false,
+    "scrollable": false
+  },
+  {
+    "text": "Notification history, conversations",
+    "resource_id": "android:id/summary",
+    "class": "android.widget.TextView",
+    "content_desc": "",
+    "package": "com.android.settings",
+    "bounds": [
+      189,
+      1588,
+      745,
+      1639
+    ],
+    "center": [
+      467,
+      1613
+    ],
+    "clickable": false,
+    "enabled": true,
+    "focused": false,
+    "long_clickable": false,
+    "scrollable": false
+  },
+  {
+    "text": "",
+    "resource_id": "",
+    "class": "android.widget.LinearLayout",
+    "content_desc": "",
+    "package": "com.android.settings",
+    "bounds": [
+      0,
+      1694,
+      1080,
+      1925
+    ],
+    "center": [
+      540,
+      1809
+    ],
+    "clickable": true,
+    "enabled": true,
+    "focused": false,
+    "long_clickable": false,
+    "scrollable": false
+  },
+  {
+    "text": "",
+    "resource_id": "com.android.settings:id/icon_frame",
+    "class": "android.widget.LinearLayout",
+    "content_desc": "",
+    "package": "com.android.settings",
+    "bounds": [
+      0,
+      1767,
+      147,
+      1852
+    ],
+    "center": [
+      73,
+      1809
+    ],
+    "clickable": false,
+    "enabled": true,
+    "focused": false,
+    "long_clickable": false,
+    "scrollable": false
+  },
+  {
+    "text": "",
+    "resource_id": "android:id/icon",
+    "class": "android.widget.ImageView",
+    "content_desc": "",
+    "package": "com.android.settings",
+    "bounds": [
+      84,
+      1778,
+      147,
+      1841
+    ],
+    "center": [
+      115,
+      1809
+    ],
+    "clickable": false,
+    "enabled": true,
+    "focused": false,
+    "long_clickable": false,
+    "scrollable": false
+  },
+  {
+    "text": "",
+    "resource_id": "com.android.settings:id/text_frame",
+    "class": "android.widget.RelativeLayout",
+    "content_desc": "",
+    "package": "com.android.settings",
+    "bounds": [
+      147,
+      1706,
+      1080,
+      1912
+    ],
+    "center": [
+      613,
+      1809
+    ],
+    "clickable": false,
+    "enabled": true,
+    "focused": false,
+    "long_clickable": false,
+    "scrollable": false
+  },
+  {
+    "text": "Battery",
+    "resource_id": "android:id/title",
+    "class": "android.widget.TextView",
+    "content_desc": "",
+    "package": "com.android.settings",
+    "bounds": [
+      189,
+      1748,
+      357,
+      1819
+    ],
+    "center": [
+      273,
+      1783
+    ],
+    "clickable": false,
+    "enabled": true,
+    "focused": false,
+    "long_clickable": false,
+    "scrollable": false
+  },
+  {
+    "text": "Charged",
+    "resource_id": "android:id/summary",
+    "class": "android.widget.TextView",
+    "content_desc": "",
+    "package": "com.android.settings",
+    "bounds": [
+      189,
+      1819,
+      328,
+      1870
+    ],
+    "center": [
+      258,
+      1844
+    ],
+    "clickable": false,
+    "enabled": true,
+    "focused": false,
+    "long_clickable": false,
+    "scrollable": false
+  },
+  {
+    "text": "",
+    "resource_id": "",
+    "class": "android.widget.LinearLayout",
+    "content_desc": "",
+    "package": "com.android.settings",
+    "bounds": [
+      0,
+      1925,
+      1080,
+      2156
+    ],
+    "center": [
+      540,
+      2040
+    ],
+    "clickable": true,
+    "enabled": true,
+    "focused": false,
+    "long_clickable": false,
+    "scrollable": false
+  },
+  {
+    "text": "",
+    "resource_id": "com.android.settings:id/icon_frame",
+    "class": "android.widget.LinearLayout",
+    "content_desc": "",
+    "package": "com.android.settings",
+    "bounds": [
+      0,
+      1998,
+      147,
+      2083
+    ],
+    "center": [
+      73,
+      2040
+    ],
+    "clickable": false,
+    "enabled": true,
+    "focused": false,
+    "long_clickable": false,
+    "scrollable": false
+  },
+  {
+    "text": "",
+    "resource_id": "android:id/icon",
+    "class": "android.widget.ImageView",
+    "content_desc": "",
+    "package": "com.android.settings",
+    "bounds": [
+      84,
+      2009,
+      147,
+      2072
+    ],
+    "center": [
+      115,
+      2040
+    ],
+    "clickable": false,
+    "enabled": true,
+    "focused": false,
+    "long_clickable": false,
+    "scrollable": false
+  },
+  {
+    "text": "",
+    "resource_id": "com.android.settings:id/text_frame",
+    "class": "android.widget.RelativeLayout",
+    "content_desc": "",
+    "package": "com.android.settings",
+    "bounds": [
+      147,
+      1937,
+      1080,
+      2143
+    ],
+    "center": [
+      613,
+      2040
+    ],
+    "clickable": false,
+    "enabled": true,
+    "focused": false,
+    "long_clickable": false,
+    "scrollable": false
+  },
+  {
+    "text": "Storage",
+    "resource_id": "android:id/title",
+    "class": "android.widget.TextView",
+    "content_desc": "",
+    "package": "com.android.settings",
+    "bounds": [
+      189,
+      1979,
+      371,
+      2050
+    ],
+    "center": [
+      280,
+      2014
+    ],
+    "clickable": false,
+    "enabled": true,
+    "focused": false,
+    "long_clickable": false,
+    "scrollable": false
+  },
+  {
+    "text": "35% used - 5.21 GB free",
+    "resource_id": "android:id/summary",
+    "class": "android.widget.TextView",
+    "content_desc": "",
+    "package": "com.android.settings",
+    "bounds": [
+      189,
+      2050,
+      580,
+      2101
+    ],
+    "center": [
+      384,
+      2075
+    ],
+    "clickable": false,
+    "enabled": true,
+    "focused": false,
+    "long_clickable": false,
+    "scrollable": false
+  },
+  {
+    "text": "",
+    "resource_id": "",
+    "class": "android.widget.LinearLayout",
+    "content_desc": "",
+    "package": "com.android.settings",
+    "bounds": [
+      0,
+      2156,
+      1080,
+      2337
+    ],
+    "center": [
+      540,
+      2246
+    ],
+    "clickable": true,
+    "enabled": true,
+    "focused": false,
+    "long_clickable": false,
+    "scrollable": false
+  },
+  {
+    "text": "",
+    "resource_id": "com.android.settings:id/icon_frame",
+    "class": "android.widget.LinearLayout",
+    "content_desc": "",
+    "package": "com.android.settings",
+    "bounds": [
+      0,
+      2229,
+      147,
+      2314
+    ],
+    "center": [
+      73,
+      2271
+    ],
+    "clickable": false,
+    "enabled": true,
+    "focused": false,
+    "long_clickable": false,
+    "scrollable": false
+  },
+  {
+    "text": "",
+    "resource_id": "android:id/icon",
+    "class": "android.widget.ImageView",
+    "content_desc": "",
+    "package": "com.android.settings",
+    "bounds": [
+      84,
+      2240,
+      147,
+      2303
+    ],
+    "center": [
+      115,
+      2271
+    ],
+    "clickable": false,
+    "enabled": true,
+    "focused": false,
+    "long_clickable": false,
+    "scrollable": false
+  },
+  {
+    "text": "",
+    "resource_id": "com.android.settings:id/text_frame",
+    "class": "android.widget.RelativeLayout",
+    "content_desc": "",
+    "package": "com.android.settings",
+    "bounds": [
+      147,
+      2168,
+      1080,
+      2337
+    ],
+    "center": [
+      613,
+      2252
+    ],
+    "clickable": false,
+    "enabled": true,
+    "focused": false,
+    "long_clickable": false,
+    "scrollable": false
+  },
+  {
+    "text": "Sound & vibration",
+    "resource_id": "android:id/title",
+    "class": "android.widget.TextView",
+    "content_desc": "",
+    "package": "com.android.settings",
+    "bounds": [
+      189,
+      2210,
+      601,
+      2281
+    ],
+    "center": [
+      395,
+      2245
+    ],
+    "clickable": false,
+    "enabled": true,
+    "focused": false,
+    "long_clickable": false,
+    "scrollable": false
+  },
+  {
+    "text": "Volume, haptics, Do Not Disturb",
+    "resource_id": "android:id/summary",
+    "class": "android.widget.TextView",
+    "content_desc": "",
+    "package": "com.android.settings",
+    "bounds": [
+      189,
+      2281,
+      707,
+      2332
+    ],
+    "center": [
+      448,
+      2306
+    ],
+    "clickable": false,
+    "enabled": true,
+    "focused": false,
+    "long_clickable": false,
+    "scrollable": false
+  },
+  {
+    "text": "",
+    "resource_id": "",
+    "class": "android.widget.LinearLayout",
+    "content_desc": "",
+    "package": "com.android.settings",
+    "bounds": [
+      0,
+      2387,
+      1080,
+      2337
+    ],
+    "center": [
+      540,
+      2362
+    ],
+    "clickable": true,
+    "enabled": true,
+    "focused": false,
+    "long_clickable": false,
+    "scrollable": false
+  },
+  {
+    "text": "",
+    "resource_id": "com.android.settings:id/text_frame",
+    "class": "android.widget.RelativeLayout",
+    "content_desc": "",
+    "package": "com.android.settings",
+    "bounds": [
+      147,
+      2399,
+      1080,
+      2337
+    ],
+    "center": [
+      613,
+      2368
+    ],
+    "clickable": false,
+    "enabled": true,
+    "focused": false,
+    "long_clickable": false,
+    "scrollable": false
+  },
+  {
+    "text": "",
+    "resource_id": "android:id/statusBarBackground",
+    "class": "android.view.View",
+    "content_desc": "",
+    "package": "com.android.settings",
+    "bounds": [
+      0,
+      0,
+      1080,
+      128
+    ],
+    "center": [
+      540,
+      64
+    ],
+    "clickable": false,
+    "enabled": true,
+    "focused": false,
+    "long_clickable": false,
+    "scrollable": false
+  }
+]
