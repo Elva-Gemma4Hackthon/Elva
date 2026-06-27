@@ -22,7 +22,6 @@ import androidx.activity.result.ActivityResult
 import androidx.core.net.toUri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.elva.laobai.system.MemoryMonitor
 import com.google.ai.edge.gallery.AppLifecycleProvider
 import com.google.ai.edge.gallery.BuildConfig
 import com.google.ai.edge.gallery.R
@@ -174,8 +173,6 @@ private val RESET_CONVERSATION_TURN_COUNT_CONFIG =
 
 private val PREDEFINED_LLM_TASK_ORDER = listOf(BuiltInTaskId.LLM_CHAT)
 
-private val ACTIVE_ELVA_TASK_IDS = setOf(BuiltInTaskId.LLM_CHAT)
-
 /**
  * ViewModel responsible for managing models, their download status, and initialization.
  *
@@ -222,7 +219,7 @@ constructor(
   }
 
   fun getActiveCustomTasks(): List<CustomTask> {
-    return customTasks.filter { it.task.id in ACTIVE_ELVA_TASK_IDS }
+    return customTasks.toList()
   }
 
   fun getSelectedModel(): Model? {
@@ -284,21 +281,6 @@ constructor(
   }
 
   open fun downloadModel(task: Task?, model: Model) {
-    // Check memory before downloading a large model (> 500 MB).
-    val modelSizeMb = model.sizeInBytes / (1024 * 1024)
-    if (modelSizeMb > 500 && !MemoryMonitor.isMemorySufficientForModel(model.sizeInBytes)) {
-      Log.w(TAG, "Insufficient memory to download ${model.name} (${modelSizeMb}MB)")
-      setDownloadStatus(
-        curModel = model,
-        status =
-          ModelDownloadStatus(
-            status = ModelDownloadStatusType.FAILED,
-            errorMessage = "设备内存不足，无法下载此模型。请清理空间后重试。",
-          ),
-      )
-      return
-    }
-
     // Update status.
     setDownloadStatus(
       curModel = model,
@@ -663,8 +645,8 @@ constructor(
     // Create model.
     val model = createModelFromImportedModelInfo(info = info)
 
-    val setOfTasks = ACTIVE_ELVA_TASK_IDS.toMutableSet()
-    for (task in getActiveCustomTasks().map { it.task }.filter { setOfTasks.contains(it.id) }) {
+    val setOfTasks = mutableSetOf(BuiltInTaskId.LLM_CHAT)
+    for (task in getTasksByIds(ids = setOfTasks)) {
       // Remove duplicated imported model if existed.
       val modelIndex = task.models.indexOfFirst { info.fileName == it.name && it.imported }
       if (modelIndex >= 0) {
@@ -1170,7 +1152,7 @@ constructor(
       // Create model.
       val model = createModelFromImportedModelInfo(info = importedModel)
 
-      // Add to active Elva task only.
+      // Add to AI chat task.
       tasks.get(key = BuiltInTaskId.LLM_CHAT)?.models?.add(model)
 
       // Update status.
