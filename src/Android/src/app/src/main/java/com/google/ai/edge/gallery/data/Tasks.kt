@@ -135,11 +135,15 @@ data class Task(
 
 object BuiltInTaskId {
   const val LLM_CHAT = "llm_chat"
+  const val LLM_ASK_IMAGE = "llm_ask_image"
+  const val LLM_ASK_AUDIO = "llm_ask_audio"
 }
 
 private val allLegacyTaskIds: MutableSet<String> =
   mutableSetOf(
     BuiltInTaskId.LLM_CHAT,
+    BuiltInTaskId.LLM_ASK_IMAGE,
+    BuiltInTaskId.LLM_ASK_AUDIO,
   )
 
 fun isLegacyTasks(id: String): Boolean {
