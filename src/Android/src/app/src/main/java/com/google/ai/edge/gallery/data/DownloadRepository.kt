@@ -41,6 +41,7 @@ import com.google.ai.edge.gallery.worker.DownloadWorker
 import com.elva.laobai.network.NetworkMonitor
 import java.util.UUID
 import java.util.concurrent.Executors
+import kotlinx.coroutines.launch
 
 private const val TAG = "AGDownloadRepository"
 private const val MODEL_NAME_TAG = "modelName"
