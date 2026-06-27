@@ -1,0 +1,12 @@
+[
+  {"key": "home"},
+  {"sleep": 0.5},
+  {"start": "com.android.settings"},
+  {"wait-stable": {"min_nodes": 40, "timeout": 20}},
+  {"tap": {"text": "Sound & vibration", "fuzzy": true}},
+  {"wait-stable": {"timeout": 5}},
+  {"screenshot": "sound_settings.png"},
+  {"swipe": {"x1": 540, "y1": 1800, "x2": 540, "y2": 600, "duration": 400}},
+  {"screenshot": "sound_settings_scrolled.png"},
+  {"key": "back"}
+]
